@@ -28,14 +28,49 @@ import main.model.InterfaceDao;
  */
 public class BarangDao implements InterfaceDao<Barang> {
 
-    // [TAMBAHAN] Helper koneksi mandiri aman sesuai konfigurasi database di koneksi.java
+    // [TAMBAHAN] Membuka koneksi database terpusat via koneksi.buka()
     private Connection bukaKoneksi() throws SQLException {
-        return DriverManager.getConnection("jdbc:mysql://localhost:3306/kasir", "root", "");
+        return main.koneksi.buka();
+    }
+
+    // [TAMBAHAN] Query dasar SELECT dengan LEFT JOIN ke tabel supplier
+    private static final String SELECT_JOIN = 
+        "SELECT b.code_barang, b.nama_barang, b.harga_beli, b.harga_jual, b.stok_barang, b.id_supplier, "
+        + "s.id AS sp_id, s.nama AS sp_nama, s.email AS sp_email, s.alamat AS sp_alamat, s.npwp AS sp_npwp, s.noRek AS sp_noRek "
+        + "FROM databarang b LEFT JOIN supplier s ON b.id_supplier = s.id";
+
+    // [TAMBAHAN] Helper pemetaan baris ResultSet ke objek Barang beserta relasi Supplier
+    private Barang mapRow(ResultSet rs) throws SQLException {
+        Barang b = new Barang(
+            rs.getLong("code_barang"),
+            rs.getString("nama_barang"),
+            rs.getInt("harga_beli"),
+            rs.getInt("harga_jual"),
+            rs.getInt("stok_barang")
+        );
+        try {
+            int spId = rs.getInt("sp_id");
+            if (!rs.wasNull() && spId > 0) {
+                main.model.Supplier s = new main.model.Supplier(
+                    spId,
+                    rs.getString("sp_nama"),
+                    rs.getString("sp_email"),
+                    rs.getString("sp_alamat"),
+                    rs.getString("sp_npwp"),
+                    rs.getString("sp_noRek")
+                );
+                b.setSupplier(s);
+            }
+        } catch (SQLException ignored) {
+            // Ditangani jika kolom supplier belum tersedia
+        }
+        return b;
     }
 
     @Override
     public void simpan(Barang barang) throws SQLException {
-        String sql = "INSERT INTO databarang (code_barang, nama_barang, harga_beli, harga_jual, stok_barang) VALUES (?, ?, ?, ?, ?)";
+        // [TAMBAHAN] Menyimpan data barang beserta relasi id_supplier
+        String sql = "INSERT INTO databarang (code_barang, nama_barang, harga_beli, harga_jual, stok_barang, id_supplier) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection con = bukaKoneksi();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setLong(1, barang.getKodeBarang());
@@ -43,20 +78,31 @@ public class BarangDao implements InterfaceDao<Barang> {
             ps.setInt(3, barang.getHargaBeli());
             ps.setInt(4, barang.getHargaJual());
             ps.setInt(5, barang.getStokBarang());
+            if (barang.getSupplier() != null && barang.getSupplier().getId() > 0) {
+                ps.setInt(6, barang.getSupplier().getId());
+            } else {
+                ps.setNull(6, java.sql.Types.INTEGER);
+            }
             ps.executeUpdate();
         }
     }
 
     @Override
     public void ubah(Barang barang) throws SQLException {
-        String sql = "UPDATE databarang SET nama_barang = ?, harga_beli = ?, harga_jual = ?, stok_barang = ? WHERE code_barang = ?";
+        // [TAMBAHAN] Mengubah data barang beserta relasi id_supplier
+        String sql = "UPDATE databarang SET nama_barang = ?, harga_beli = ?, harga_jual = ?, stok_barang = ?, id_supplier = ? WHERE code_barang = ?";
         try (Connection con = bukaKoneksi();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, barang.getNamaBarang());
             ps.setInt(2, barang.getHargaBeli());
             ps.setInt(3, barang.getHargaJual());
             ps.setInt(4, barang.getStokBarang());
-            ps.setLong(5, barang.getKodeBarang());
+            if (barang.getSupplier() != null && barang.getSupplier().getId() > 0) {
+                ps.setInt(5, barang.getSupplier().getId());
+            } else {
+                ps.setNull(5, java.sql.Types.INTEGER);
+            }
+            ps.setLong(6, barang.getKodeBarang());
             ps.executeUpdate();
         }
     }
@@ -85,19 +131,12 @@ public class BarangDao implements InterfaceDao<Barang> {
     @Override
     public List<Barang> ambilSemua() throws SQLException {
         List<Barang> list = new ArrayList<>();
-        String sql = "SELECT * FROM databarang";
+        String sql = SELECT_JOIN + " ORDER BY b.nama_barang ASC";
         try (Connection con = bukaKoneksi();
              PreparedStatement ps = con.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                Barang b = new Barang(
-                    rs.getLong("code_barang"),
-                    rs.getString("nama_barang"),
-                    rs.getInt("harga_beli"),
-                    rs.getInt("harga_jual"),
-                    rs.getInt("stok_barang")
-                );
-                list.add(b);
+                list.add(mapRow(rs));
             }
         }
         return list;
@@ -112,26 +151,20 @@ public class BarangDao implements InterfaceDao<Barang> {
 
     /**
      * [TAMBAHAN] Method Overloading 1:
-     * Mencari barang berdasarkan KODE unik (tipe data long).
+     * Mencari barang berdasarkan KODE unik (tipe data long) dengan LEFT JOIN ke Supplier.
      *
      * @param kodeBarang kode unik barang
      * @return objek Barang atau null jika tidak ditemukan
      * @throws SQLException jika ada kesalahan query
      */
     public Barang cari(long kodeBarang) throws SQLException {
-        String sql = "SELECT * FROM databarang WHERE code_barang = ? LIMIT 1";
+        String sql = SELECT_JOIN + " WHERE b.code_barang = ? LIMIT 1";
         try (Connection con = bukaKoneksi();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setLong(1, kodeBarang);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return new Barang(
-                        rs.getLong("code_barang"),
-                        rs.getString("nama_barang"),
-                        rs.getInt("harga_beli"),
-                        rs.getInt("harga_jual"),
-                        rs.getInt("stok_barang")
-                    );
+                    return mapRow(rs);
                 }
             }
         }
@@ -140,27 +173,20 @@ public class BarangDao implements InterfaceDao<Barang> {
 
     /**
      * [TAMBAHAN] Method Overloading 2:
-     * Mencari barang berdasarkan NAMA barang (tipe data String).
-     * Nama method sama ("cari"), tetapi parameternya String.
+     * Mencari barang berdasarkan NAMA barang (tipe data String) dengan LEFT JOIN ke Supplier.
      *
      * @param namaBarang nama barang yang dicari
      * @return objek Barang atau null jika tidak ditemukan
      * @throws SQLException jika ada kesalahan query
      */
     public Barang cari(String namaBarang) throws SQLException {
-        String sql = "SELECT * FROM databarang WHERE nama_barang = ? LIMIT 1";
+        String sql = SELECT_JOIN + " WHERE b.nama_barang = ? LIMIT 1";
         try (Connection con = bukaKoneksi();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, namaBarang);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return new Barang(
-                        rs.getLong("code_barang"),
-                        rs.getString("nama_barang"),
-                        rs.getInt("harga_beli"),
-                        rs.getInt("harga_jual"),
-                        rs.getInt("stok_barang")
-                    );
+                    return mapRow(rs);
                 }
             }
         }
@@ -178,24 +204,40 @@ public class BarangDao implements InterfaceDao<Barang> {
      */
     public List<Barang> cari(int minStok, int maxStok) throws SQLException {
         List<Barang> list = new ArrayList<>();
-        String sql = "SELECT * FROM databarang WHERE stok_barang BETWEEN ? AND ?";
+        String sql = SELECT_JOIN + " WHERE b.stok_barang BETWEEN ? AND ? ORDER BY b.stok_barang ASC";
         try (Connection con = bukaKoneksi();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, minStok);
             ps.setInt(2, maxStok);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    list.add(new Barang(
-                        rs.getLong("code_barang"),
-                        rs.getString("nama_barang"),
-                        rs.getInt("harga_beli"),
-                        rs.getInt("harga_jual"),
-                        rs.getInt("stok_barang")
-                    ));
+                    list.add(mapRow(rs));
                 }
             }
         }
         return list;
+    }
+
+    /**
+     * [TAMBAHAN] Menghitung jumlah barang yang dipasok oleh supplier tertentu.
+     * Digunakan untuk validasi konfirmasi sebelum menghapus supplier.
+     *
+     * @param idSupplier ID supplier yang dicek
+     * @return jumlah barang yang terkait dengan supplier tersebut
+     * @throws SQLException jika terjadi error database
+     */
+    public int hitungBarangBySupplier(int idSupplier) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM databarang WHERE id_supplier = ?";
+        try (Connection con = bukaKoneksi();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idSupplier);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
     }
 
     // ── Logika Transaksional Database ────────────────────────────────────────

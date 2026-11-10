@@ -77,6 +77,14 @@ public class Transaksi {
         hitungTotal(); // recalculate
     }
 
+    public void setTotal(long total) {
+        this.total = total;
+    }
+
+    public void setKembalian(long kembalian) {
+        this.kembalian = kembalian;
+    }
+
     public void setJumlahBayar(long jumlahBayar) {
         this.jumlahBayar = jumlahBayar;
         this.kembalian   = jumlahBayar - this.total;

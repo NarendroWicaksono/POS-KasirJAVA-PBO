@@ -19,6 +19,8 @@ public class Barang {
     private int    hargaBeli;
     private int    hargaJual;
     private int    stokBarang;
+    // [TAMBAHAN] Asosiasi: satu barang dapat dipasok oleh satu Supplier (boleh null)
+    private Supplier supplier;
 
     // ── Constructor kosong ────────────────────────────────────
     // [TAMBAHAN]
@@ -43,6 +45,22 @@ public class Barang {
         this.stokBarang  = stokBarang;
     }
 
+    /**
+     * [TAMBAHAN] Constructor lengkap dengan asosiasi Supplier.
+     *
+     * @param kodeBarang kode unik barang
+     * @param namaBarang nama barang
+     * @param hargaBeli  harga beli
+     * @param hargaJual  harga jual
+     * @param stokBarang stok barang
+     * @param supplier   objek pemasok (boleh null jika tanpa supplier)
+     */
+    public Barang(long kodeBarang, String namaBarang,
+                  int hargaBeli, int hargaJual, int stokBarang, Supplier supplier) {
+        this(kodeBarang, namaBarang, hargaBeli, hargaJual, stokBarang);
+        this.supplier = supplier;
+    }
+
     // ── Getter ────────────────────────────────────────────────
     // [TAMBAHAN]
     public long   getKodeBarang()  { return kodeBarang; }
@@ -50,9 +68,13 @@ public class Barang {
     public int    getHargaBeli()   { return hargaBeli; }
     public int    getHargaJual()   { return hargaJual; }
     public int    getStokBarang()  { return stokBarang; }
+    public Supplier getSupplier()  { return supplier; }
 
     // ── Setter dengan validasi — Encapsulation ────────────────
     // [TAMBAHAN]
+    public void setSupplier(Supplier supplier) {
+        this.supplier = supplier;
+    }
     public void setKodeBarang(long kodeBarang) {
         if (kodeBarang <= 0)
             throw new IllegalArgumentException("Kode barang harus lebih dari 0.");

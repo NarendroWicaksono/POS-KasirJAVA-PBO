@@ -17,7 +17,13 @@ import javax.swing.table.TableRowSorter;
  */
 public class tambahBarang extends javax.swing.JFrame {
      
-    koneksi con = new koneksi();
+    // [TAMBAHAN] Inisialisasi DAO untuk akses data barang dan supplier
+    private final main.dao.BarangDao barangDao = new main.dao.BarangDao();
+    private final main.dao.SupplierDao supplierDao = new main.dao.SupplierDao();
+
+    // [TAMBAHAN] Komponen relasi Supplier: combo box dan daftar supplier
+    private javax.swing.JComboBox<String> cbSupplier;
+    private java.util.List<main.model.Supplier> listSupplier = new java.util.ArrayList<>();
 
     /**
      * Creates new form tambahBarang
@@ -26,6 +32,7 @@ public class tambahBarang extends javax.swing.JFrame {
         initComponents();
         setTitle("DATA BARANG");
         setLocationRelativeTo(null);
+        initSupplierComponents(); // [TAMBAHAN] Pasang komponen combo box supplier
         getData();
     }
     
@@ -35,25 +42,103 @@ public class tambahBarang extends javax.swing.JFrame {
         codeBarang.setText("");
         hargaBeli.setText("");
         hargaJual.setText("");
+        if (cbSupplier != null && cbSupplier.getItemCount() > 0) {
+            cbSupplier.setSelectedIndex(0);
+        }
+    }
+
+    /**
+     * [TAMBAHAN] Menginisialisasi komponen combo box supplier dan menambahkannya
+     * ke antarmuka pengguna tanpa memodifikasi blok auto-generated initComponents.
+     */
+    private void initSupplierComponents() {
+        cbSupplier = new javax.swing.JComboBox<>();
+        cbSupplier.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 12));
+        cbSupplier.setBackground(java.awt.Color.WHITE);
+        cbSupplier.setForeground(java.awt.Color.BLACK);
+
+        javax.swing.JLabel lblSupplier = new javax.swing.JLabel("Supplier :");
+        lblSupplier.setForeground(java.awt.Color.WHITE);
+        lblSupplier.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+
+        // Letakkan di panel jPanel1 tepat di atas tabel (sisi kiri)
+        lblSupplier.setBounds(20, 230, 65, 25);
+        cbSupplier.setBounds(85, 230, 195, 25);
+        jPanel1.add(lblSupplier);
+        jPanel1.add(cbSupplier);
+
+        // Tambahkan kolom Supplier pada model tabel jika belum ada
+        DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
+        if (model.getColumnCount() == 5) {
+            model.addColumn("Supplier");
+        }
+
+        muatSupplierCombo();
+    }
+
+    /**
+     * [TAMBAHAN] Memuat daftar supplier dari SupplierDao ke combo box.
+     */
+    private void muatSupplierCombo() {
+        cbSupplier.removeAllItems();
+        cbSupplier.addItem("Tanpa supplier");
+        listSupplier.clear();
+        try {
+            listSupplier = supplierDao.ambilSemua();
+            for (main.model.Supplier s : listSupplier) {
+                cbSupplier.addItem(s.getNama() + " (ID: " + s.getId() + ")");
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat daftar supplier: " + e.getMessage());
+        }
+    }
+
+    /**
+     * [TAMBAHAN] Mengambil objek Supplier yang sedang dipilih di combo box.
+     * @return objek Supplier atau null jika memilih "Tanpa supplier"
+     */
+    private main.model.Supplier getSelectedSupplier() {
+        int index = cbSupplier.getSelectedIndex();
+        if (index > 0 && (index - 1) < listSupplier.size()) {
+            return listSupplier.get(index - 1);
+        }
+        return null;
+    }
+
+    /**
+     * [TAMBAHAN] Memilih item supplier di combo box berdasarkan nama supplier.
+     */
+    private void pilihSupplierDiCombo(String namaSup) {
+        if (namaSup == null || namaSup.isEmpty() || namaSup.equalsIgnoreCase("Tanpa supplier") || namaSup.equals("-")) {
+            cbSupplier.setSelectedIndex(0);
+            return;
+        }
+        for (int i = 0; i < listSupplier.size(); i++) {
+            if (listSupplier.get(i).getNama().equalsIgnoreCase(namaSup)) {
+                cbSupplier.setSelectedIndex(i + 1);
+                return;
+            }
+        }
+        cbSupplier.setSelectedIndex(0);
     }
     
-    // [TAMBAHAN] Inisialisasi DAO untuk akses data barang
-    private final main.dao.BarangDao barangDao = new main.dao.BarangDao();
-
     private void getData() {
         DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
         model.setRowCount(0);
         
         try {
-            // [TAMBAHAN] Mengambil semua data barang via BarangDao
+            // [TAMBAHAN] Mengambil semua data barang via BarangDao beserta relasi supplier
             java.util.List<main.model.Barang> list = barangDao.ambilSemua();
             for (main.model.Barang b : list) {
+                String namaSup = (b.getSupplier() != null && b.getSupplier().getNama() != null)
+                        ? b.getSupplier().getNama() : "Tanpa supplier";
                 Object[] rowData = {
                     b.getKodeBarang(),
                     b.getNamaBarang(),
                     b.getStokBarang(),
                     b.getHargaBeli(),
-                    b.getHargaJual()
+                    b.getHargaJual(),
+                    namaSup
                 };
                 model.addRow(rowData);
             }
@@ -361,15 +446,16 @@ public class tambahBarang extends javax.swing.JFrame {
     }//GEN-LAST:event_backActionPerformed
 
     private void addActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addActionPerformed
-        // [TAMBAHAN] Menambah barang baru via Barang model dan BarangDao
+        // [TAMBAHAN] Menambah barang baru beserta relasi Supplier via BarangDao
         try {
             long kode = Long.parseLong(codeBarang.getText().trim());
             String nama = namaBarang.getText().trim();
             int hbeli = Integer.parseInt(hargaBeli.getText().trim());
             int hjual = Integer.parseInt(hargaJual.getText().trim());
             int stok = Integer.parseInt(stokBarang.getText().trim());
+            main.model.Supplier sup = getSelectedSupplier();
 
-            main.model.Barang barang = new main.model.Barang(kode, nama, hbeli, hjual, stok);
+            main.model.Barang barang = new main.model.Barang(kode, nama, hbeli, hjual, stok, sup);
             barangDao.simpan(barang);
 
             JOptionPane.showMessageDialog(null, "Data Barang : BERHASIL DITAMBAHKAN");
@@ -399,12 +485,18 @@ public class tambahBarang extends javax.swing.JFrame {
             hargaBeli.setText(Hbeli); 
             hargaJual.setText(Hjual);
             stokBarang.setText(stok);
-            
+
+            // [TAMBAHAN] Sinkronkan pilihan combo box supplier sesuai baris yang dipilih
+            if (tbl_data.getColumnCount() > 5 && tbl_data.getValueAt(selectedRow, 5) != null) {
+                pilihSupplierDiCombo(tbl_data.getValueAt(selectedRow, 5).toString());
+            } else {
+                pilihSupplierDiCombo(null);
+            }
         }
     }//GEN-LAST:event_tbl_dataMouseClicked
 
     private void updateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateActionPerformed
-        // [TAMBAHAN] Memperbarui barang via Barang model dan BarangDao
+        // [TAMBAHAN] Memperbarui barang beserta relasi Supplier via BarangDao
         int selectedRow = tbl_data.getSelectedRow();
         if (selectedRow == -1) {
             JOptionPane.showMessageDialog(null, "PILIH DATA YANG AKAN DI UPDATE !!");
@@ -417,8 +509,9 @@ public class tambahBarang extends javax.swing.JFrame {
             int hbeli = Integer.parseInt(hargaBeli.getText().trim());
             int hjual = Integer.parseInt(hargaJual.getText().trim());
             int stok = Integer.parseInt(stokBarang.getText().trim());
+            main.model.Supplier sup = getSelectedSupplier();
 
-            main.model.Barang barang = new main.model.Barang(kode, nama, hbeli, hjual, stok);
+            main.model.Barang barang = new main.model.Barang(kode, nama, hbeli, hjual, stok, sup);
             barangDao.ubah(barang);
 
             JOptionPane.showMessageDialog(null, "Data Barang : BERHASIL DI UPDATE");

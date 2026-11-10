@@ -27,7 +27,9 @@ import javax.swing.table.DefaultTableModel;
  */
 public class dashbordKasir extends javax.swing.JFrame {
 
-    koneksi con = new koneksi();
+    // [TAMBAHAN] Inisialisasi DAO untuk akses data transaksi dan barang tanpa koneksi manual
+    private final main.dao.TransaksiDao transaksiDao = new main.dao.TransaksiDao();
+    private final main.dao.BarangDao barangDao = new main.dao.BarangDao();
 
     /**
      * Creates new form dashbordAdmin
@@ -54,23 +56,14 @@ public class dashbordKasir extends javax.swing.JFrame {
 
     public String noFaktur() {
         String faktur = "TSK001";
-        con.config();
-
-        String sql = "SELECT no_transaksi FROM transaksi ORDER BY no_transaksi DESC LIMIT 1";
         try {
-            ResultSet rs = con.stm.executeQuery(sql);
-            if (rs.next()) {
-                String noTransaksi = rs.getString("no_transaksi");
-
-                // Pisahkan prefix dan bagian angka dari nomor transaksi terakhir
+            String noTransaksi = transaksiDao.ambilNoTransaksiTerakhir();
+            if (noTransaksi != null && noTransaksi.length() > 3) {
                 String prefix = noTransaksi.substring(0, 3);
                 int numberPart = Integer.parseInt(noTransaksi.substring(3)) + 1;
-
-                // Buat nomor faktur baru dengan prefix dan angka yang di-increment
                 faktur = prefix + String.format("%03d", numberPart);
             }
-
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             Logger.getLogger(dashbordKasir.class.getName()).log(Level.SEVERE, null, ex);
         }
 
@@ -439,56 +432,51 @@ public class dashbordKasir extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void updateQty(){
-        con.config();
-        
-    }
-    
-//    Method untuk memasukan data kedalam tabel
+    // [TAMBAHAN] Method untuk memasukkan data barang ke dalam tabel keranjang via BarangDao.cari(long)
     private void addData(String productId) {
-        con.config();
+        if (productId == null || productId.trim().isEmpty()) {
+            return;
+        }
+
+        long kode;
+        try {
+            kode = Long.parseLong(productId.trim());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Kode barang harus berupa angka!", "Input Tidak Valid", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         DefaultTableModel tabel = (DefaultTableModel) tbls.getModel();
-//        tabel.setRowCount(0);
-
-        String sql = "SELECT * FROM databarang WHERE code_barang = " + productId + " LIMIT 1;";
-        try (ResultSet rs = con.stm.executeQuery(sql)) {
-            if (rs.next()) {
-                String nama = rs.getString("nama_barang");
-                int harga = rs.getInt("harga_jual");
+        try {
+            main.model.Barang barang = barangDao.cari(kode);
+            if (barang != null) {
+                String nama = barang.getNamaBarang();
+                int harga = barang.getHargaJual();
                 int qty = 1;
-
                 int jumlah = harga * qty;
-//                System.out.println(nama);
-//                System.out.println(jumlah);
 
-                Integer currentQuantity = 0;
                 boolean productExists = false;
                 for (int i = 0; i < tabel.getRowCount(); i++) {
-                    // Corrected here
-                    System.out.println(tabel.getValueAt(i, 0));
-
                     if (tabel.getValueAt(i, 0).equals(nama)) {
-
-                        currentQuantity = (int) tbls.getValueAt(i, 2);
+                        int currentQuantity = (int) tbls.getValueAt(i, 2);
                         tabel.setValueAt(currentQuantity + 1, i, 2);  // Update quantity
                         tabel.setValueAt((currentQuantity + 1) * harga, i, 3);  // Update total price
                         productExists = true;
-//                        System.out.println(productExists);
                         break;
                     }
                 }
-                // If the product does not exist, add it as a new row
+                // Jika produk belum ada di tabel, tambahkan sebagai baris baru
                 if (!productExists) {
                     tabel.addRow(new Object[]{nama, harga, qty, jumlah});
                 }
 
-                System.out.println(productExists);
                 updateTotal();
             } else {
-                JOptionPane.showMessageDialog(null, "Produk tidak ditemukan");
+                JOptionPane.showMessageDialog(this, "Produk dengan kode " + kode + " tidak ditemukan!");
             }
         } catch (SQLException ex) {
             Logger.getLogger(dashbordKasir.class.getName()).log(Level.SEVERE, null, ex);
+            JOptionPane.showMessageDialog(this, "Gagal mengambil data produk: " + ex.getMessage());
         }
     }
 
@@ -631,33 +619,27 @@ public class dashbordKasir extends javax.swing.JFrame {
 
         String noFaktur = txtNoTransaksi.getText();
         String petugas = txtkasir.getText().replace("Kasir : ", "").trim();
-        String waktu = txtJam.getText().replace("<html>", "").replace("<br>", " | ").replace("</html>", "").trim();
+        // [TAMBAHAN] Format waktu ISO (yyyy-MM-dd HH:mm:ss) agar dapat diurutkan secara benar leksikografis di database
+        String waktu = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         main.model.Transaksi transaksi = new main.model.Transaksi(noFaktur, petugas, waktu);
         transaksi.setJumlahBayar(bayar);
 
         // Ambil setiap baris item dari tabel transaksi
-        main.dao.BarangDao barangDao = new main.dao.BarangDao();
         for (int i = 0; i < rowCount; i++) {
             String namaBarang = tabel.getValueAt(i, 0).toString();
             int harga = Integer.parseInt(tabel.getValueAt(i, 1).toString());
             int qty = Integer.parseInt(tabel.getValueAt(i, 2).toString());
 
-            // Cari kode barang dari nama
+            // Cari kode barang dari nama via BarangDao
             long kodeBarang = 0;
             try {
-                con.config();
-                String sqlKode = "SELECT code_barang FROM databarang WHERE nama_barang = ? LIMIT 1";
-                try (java.sql.PreparedStatement ps = con.con.prepareStatement(sqlKode)) {
-                    ps.setString(1, namaBarang);
-                    try (java.sql.ResultSet rs = ps.executeQuery()) {
-                        if (rs.next()) {
-                            kodeBarang = rs.getLong("code_barang");
-                        }
-                    }
+                main.model.Barang b = barangDao.cari(namaBarang);
+                if (b != null) {
+                    kodeBarang = b.getKodeBarang();
                 }
-            } catch (java.sql.SQLException ex) {
-                // Abaikan jika fallback
+            } catch (SQLException ex) {
+                Logger.getLogger(dashbordKasir.class.getName()).log(Level.SEVERE, null, ex);
             }
 
             main.model.DetailTransaksi detail = new main.model.DetailTransaksi(noFaktur, kodeBarang, namaBarang, harga, qty);
@@ -665,7 +647,6 @@ public class dashbordKasir extends javax.swing.JFrame {
         }
 
         // Simpan transaksi secara atomik melalui TransaksiDao
-        main.dao.TransaksiDao transaksiDao = new main.dao.TransaksiDao();
         try {
             transaksiDao.simpan(transaksi);
 

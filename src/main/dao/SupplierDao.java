@@ -21,9 +21,9 @@ import main.model.Supplier;
  */
 public class SupplierDao implements InterfaceDao<Supplier> {
 
-    // [TAMBAHAN] Helper koneksi mandiri aman
+    // [TAMBAHAN] Membuka koneksi database terpusat via koneksi.buka()
     private Connection bukaKoneksi() throws SQLException {
-        return DriverManager.getConnection("jdbc:mysql://localhost:3306/kasir", "root", "");
+        return main.koneksi.buka();
     }
 
     @Override

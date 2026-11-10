@@ -29,14 +29,14 @@ public class TransaksiDao implements InterfaceDao<Transaksi> {
 
     private final BarangDao barangDao = new BarangDao();
 
-    // [TAMBAHAN] Helper koneksi mandiri aman
+    // [TAMBAHAN] Membuka koneksi database terpusat via koneksi.buka()
     private Connection bukaKoneksi() throws SQLException {
-        return DriverManager.getConnection("jdbc:mysql://localhost:3306/kasir", "root", "");
+        return main.koneksi.buka();
     }
 
     /**
      * [TAMBAHAN] Menyimpan transaksi secara atomik (ACID):
-     * 1. Insert ke tabel transaksi (header)
+     * 1. Insert ke tabel transaksi (header dengan total, bayar, kembalian)
      * 2. Insert tiap item ke tabel detail_transaksi
      * 3. Update / kurangi stok_barang di tabel databarang
      * 4. Jika semua berhasil -> commit()
@@ -49,13 +49,15 @@ public class TransaksiDao implements InterfaceDao<Transaksi> {
             con = bukaKoneksi();
             con.setAutoCommit(false); // Memulai transaksi database
 
-            // 1. Simpan header transaksi
-            String sqlHeader = "INSERT INTO transaksi (no_transaksi, petugas_kasir, total, waktu_transaksi) VALUES (?, ?, ?, ?)";
+            // 1. Simpan header transaksi (termasuk bayar dan kembalian)
+            String sqlHeader = "INSERT INTO transaksi (no_transaksi, petugas_kasir, total, bayar, kembalian, waktu_transaksi) VALUES (?, ?, ?, ?, ?, ?)";
             try (PreparedStatement psHeader = con.prepareStatement(sqlHeader)) {
                 psHeader.setString(1, tr.getNoTransaksi());
                 psHeader.setString(2, tr.getPetugasKasir());
                 psHeader.setLong(3, tr.getTotal());
-                psHeader.setString(4, tr.getWaktuTransaksi());
+                psHeader.setLong(4, tr.getJumlahBayar());
+                psHeader.setLong(5, tr.getKembalian());
+                psHeader.setString(6, tr.getWaktuTransaksi());
                 psHeader.executeUpdate();
             }
 
@@ -135,6 +137,21 @@ public class TransaksiDao implements InterfaceDao<Transaksi> {
     }
 
     /**
+     * [TAMBAHAN] Helper membaca kolom numerik opsional tanpa crash jika kolom belum ada.
+     */
+    private long ambilLongAman(ResultSet rs, String kolom) {
+        try {
+            Object obj = rs.getObject(kolom);
+            if (obj != null) {
+                return rs.getLong(kolom);
+            }
+        } catch (SQLException ignored) {
+            // Kolom belum ada di database lama
+        }
+        return 0;
+    }
+
+    /**
      * [TAMBAHAN] Mengambil seluruh riwayat penjualan untuk ditampilkan di laporan.
      * Diurutkan dari transaksi terbaru.
      *
@@ -153,11 +170,64 @@ public class TransaksiDao implements InterfaceDao<Transaksi> {
                     rs.getString("petugas_kasir"),
                     rs.getString("waktu_transaksi")
                 );
-                t.setJumlahBayar(rs.getLong("total"));
+                t.setTotal(rs.getLong("total"));
+                long bayar = ambilLongAman(rs, "bayar");
+                long kembalian = ambilLongAman(rs, "kembalian");
+                t.setJumlahBayar(bayar);
+                t.setKembalian(kembalian);
                 list.add(t);
             }
         }
         return list;
+    }
+
+    /**
+     * [TAMBAHAN] Mencari transaksi berdasarkan nomor faktur lengkap.
+     *
+     * @param noTransaksi nomor faktur transaksi
+     * @return objek Transaksi lengkap jika ditemukan, null jika tidak
+     * @throws SQLException jika ada kendala database
+     */
+    public Transaksi cariByNoTransaksi(String noTransaksi) throws SQLException {
+        String sql = "SELECT * FROM transaksi WHERE no_transaksi = ? LIMIT 1";
+        try (Connection con = bukaKoneksi();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, noTransaksi);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Transaksi t = new Transaksi(
+                        rs.getString("no_transaksi"),
+                        rs.getString("petugas_kasir"),
+                        rs.getString("waktu_transaksi")
+                    );
+                    t.setTotal(rs.getLong("total"));
+                    long bayar = ambilLongAman(rs, "bayar");
+                    long kembalian = ambilLongAman(rs, "kembalian");
+                    t.setJumlahBayar(bayar);
+                    t.setKembalian(kembalian);
+                    return t;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * [TAMBAHAN] Mengambil nomor transaksi terakhir dari database untuk penomoran otomatis.
+     *
+     * @return String nomor transaksi terakhir atau null jika tabel masih kosong
+     * @throws SQLException jika ada kendala database
+     */
+    public String ambilNoTransaksiTerakhir() throws SQLException {
+        String sql = "SELECT no_transaksi FROM transaksi ORDER BY no_transaksi DESC LIMIT 1";
+        try (Connection con = bukaKoneksi();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getString("no_transaksi");
+            }
+        }
+        return null;
     }
 
     /**

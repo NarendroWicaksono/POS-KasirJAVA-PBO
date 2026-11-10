@@ -27,9 +27,9 @@ import main.model.Pengguna;
  */
 public class PenggunaDao implements InterfaceDao<Pengguna> {
 
-    // [TAMBAHAN] Helper koneksi mandiri aman
+    // [TAMBAHAN] Membuka koneksi database terpusat via koneksi.buka()
     private Connection bukaKoneksi() throws SQLException {
-        return DriverManager.getConnection("jdbc:mysql://localhost:3306/kasir", "root", "");
+        return main.koneksi.buka();
     }
 
     /**

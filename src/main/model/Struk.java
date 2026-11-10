@@ -69,8 +69,14 @@ public class Struk {
         if (transaksi.getDiskon() > 0) {
             sb.append(String.format("Diskon (%d%%)  : Ya\n", transaksi.getDiskon()));
         }
-        sb.append(String.format("Bayar         : Rp. %,d\n", transaksi.getJumlahBayar()));
-        sb.append(String.format("Kembalian     : Rp. %,d\n", transaksi.getKembalian()));
+        // [TAMBAHAN] Menampilkan tanda "-" jika data transaksi lama belum memiliki nilai bayar/kembalian
+        if (transaksi.getJumlahBayar() > 0) {
+            sb.append(String.format("Bayar         : Rp. %,d\n", transaksi.getJumlahBayar()));
+            sb.append(String.format("Kembalian     : Rp. %,d\n", transaksi.getKembalian()));
+        } else {
+            sb.append("Bayar         : -\n");
+            sb.append("Kembalian     : -\n");
+        }
         sb.append("=========================================\n");
         sb.append("     Terima Kasih Atas Kunjungan Anda    \n");
         sb.append("      Barang yang dibeli tidak dapat     \n");

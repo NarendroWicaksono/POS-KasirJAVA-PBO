@@ -17,8 +17,9 @@ import javax.swing.table.TableRowSorter;
  */
 public class dataSupplier extends javax.swing.JFrame {
      
-    // [TAMBAHAN] Inisialisasi DAO untuk akses data supplier (menggantikan koneksi manual)
+    // [TAMBAHAN] Inisialisasi DAO untuk akses data supplier dan pengecekan relasi ke barang
     private final main.dao.SupplierDao supplierDao = new main.dao.SupplierDao();
+    private final main.dao.BarangDao barangDao = new main.dao.BarangDao();
     HashMap<String, Integer> supplier = new HashMap<String, Integer>();
     Integer id;
 
@@ -449,23 +450,44 @@ public class dataSupplier extends javax.swing.JFrame {
     }//GEN-LAST:event_updateActionPerformed
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
-        // [TAMBAHAN] Hapus supplier via SupplierDao (memperbaiki bug query string SQL asli)
+        // [TAMBAHAN] Hapus supplier via SupplierDao dengan pengecekan relasi one-to-many ke barang
         int selectedRow = tbl_data.getSelectedRow();
         if (selectedRow == -1) {
             JOptionPane.showMessageDialog(null, "PILIH DATA YANG AKAN DI HAPUS !!");
             return;
         }
-        int confirm = JOptionPane.showConfirmDialog(this, "Yakin Ingin Menghapus Data Ini?", 
-                "Konfirmasi", JOptionPane.YES_NO_OPTION);
+
+        String namaSp = tbl_data.getValueAt(selectedRow, 0).toString();
+        Integer idSp = supplier.get(namaSp);
+
+        if (idSp == null) {
+            JOptionPane.showMessageDialog(null, "ID Supplier tidak ditemukan!");
+            return;
+        }
+
+        // [TAMBAHAN] Pengecekan apakah supplier ini masih memiliki barang terkait
+        int jumlahBarang = 0;
+        try {
+            jumlahBarang = barangDao.hitungBarangBySupplier(idSp);
+        } catch (SQLException ex) {
+            // Ditangani jika kolom id_supplier belum dibuat di database lokal
+        }
+
+        String pesanKonfirmasi;
+        if (jumlahBarang > 0) {
+            pesanKonfirmasi = "PERINGATAN RELASI DATA:\n"
+                    + "Supplier '" + namaSp + "' saat ini masih terhubung dengan " + jumlahBarang + " barang.\n"
+                    + "Jika dihapus, barang terkait akan kehilangan data supplier-nya (menjadi 'Tanpa supplier').\n\n"
+                    + "Apakah Anda yakin ingin tetap menghapus supplier ini?";
+        } else {
+            pesanKonfirmasi = "Yakin Ingin Menghapus Data Supplier '" + namaSp + "'?";
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this, pesanKonfirmasi, 
+                "Konfirmasi Hapus Supplier", JOptionPane.YES_NO_OPTION,
+                jumlahBarang > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.QUESTION_MESSAGE);
+
         if (confirm == JOptionPane.YES_OPTION) {
-            String namaSp = tbl_data.getValueAt(selectedRow, 0).toString();
-            Integer idSp = supplier.get(namaSp);
-
-            if (idSp == null) {
-                JOptionPane.showMessageDialog(null, "ID Supplier tidak ditemukan!");
-                return;
-            }
-
             try {
                 supplierDao.hapus(idSp);
 

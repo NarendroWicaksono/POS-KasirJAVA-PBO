@@ -27,10 +27,15 @@ public class listBarang extends javax.swing.JFrame {
         initComponents();
         setTitle("LIST DATA BARANG");
         setLocationRelativeTo(null);
+        // [TAMBAHAN] Tambahkan kolom Supplier pada model tabel
+        DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
+        if (model.getColumnCount() == 4) {
+            model.addColumn("Supplier");
+        }
         getData();
     }
     
-    // [TAMBAHAN] Mengambil data barang via BarangDao, menggantikan query SQL manual
+    // [TAMBAHAN] Mengambil data barang via BarangDao beserta nama Supplier
     private void getData() {
         DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
         model.setRowCount(0);
@@ -38,11 +43,14 @@ public class listBarang extends javax.swing.JFrame {
         try {
             java.util.List<main.model.Barang> list = barangDao.ambilSemua();
             for (main.model.Barang b : list) {
+                String namaSup = (b.getSupplier() != null && b.getSupplier().getNama() != null)
+                        ? b.getSupplier().getNama() : "-";
                 Object[] rowData = {
                     b.getKodeBarang(),
                     b.getNamaBarang(),
                     b.getHargaJual(),
-                    b.getStokBarang()
+                    b.getStokBarang(),
+                    namaSup
                 };
                 model.addRow(rowData);
             }

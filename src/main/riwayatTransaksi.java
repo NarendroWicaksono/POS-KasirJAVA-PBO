@@ -106,7 +106,7 @@ public class riwayatTransaksi extends JFrame {
         panelTabel.setBackground(Color.WHITE);
 
         // Model Tabel Transaksi
-        String[] kolomTransaksi = {"No. Faktur", "Petugas Kasir", "Total Belanja", "Waktu Transaksi"};
+        String[] kolomTransaksi = {"No. Faktur", "Petugas Kasir", "Total Belanja", "Bayar", "Kembalian", "Waktu Transaksi"};
         modelTransaksi = new DefaultTableModel(kolomTransaksi, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -179,16 +179,21 @@ public class riwayatTransaksi extends JFrame {
 
     /**
      * [TAMBAHAN] Memuat seluruh riwayat transaksi dari database menggunakan TransaksiDao.
+     * Menampilkan tanda "-" jika data transaksi lama belum memiliki nilai bayar/kembalian.
      */
     public void muatDataTransaksi() {
         modelTransaksi.setRowCount(0);
         try {
             List<Transaksi> list = transaksiDao.ambilRiwayatPenjualan();
             for (Transaksi t : list) {
+                String strBayar = t.getJumlahBayar() > 0 ? String.format("Rp. %,d", t.getJumlahBayar()) : "-";
+                String strKembali = t.getJumlahBayar() > 0 ? String.format("Rp. %,d", t.getKembalian()) : "-";
                 modelTransaksi.addRow(new Object[]{
                     t.getNoTransaksi(),
                     t.getPetugasKasir(),
-                    String.format("Rp. %,d", t.getJumlahBayar()),
+                    String.format("Rp. %,d", t.getTotal()),
+                    strBayar,
+                    strKembali,
                     t.getWaktuTransaksi()
                 });
             }
@@ -220,6 +225,7 @@ public class riwayatTransaksi extends JFrame {
 
     /**
      * [TAMBAHAN] Mencetak ulang struk dari baris riwayat yang sedang dipilih.
+     * Menggunakan data bayar dan kembalian asli dari database (bukan disamakan bayar = total).
      */
     private void cetakUlangStrukTerpilih() {
         int row = tblTransaksi.getSelectedRow();
@@ -231,20 +237,24 @@ public class riwayatTransaksi extends JFrame {
         int modelRow = tblTransaksi.convertRowIndexToModel(row);
         String noFaktur = modelTransaksi.getValueAt(modelRow, 0).toString();
         String kasir = modelTransaksi.getValueAt(modelRow, 1).toString();
-        String waktu = modelTransaksi.getValueAt(modelRow, 3).toString();
+        String waktu = modelTransaksi.getValueAt(modelRow, 5).toString();
 
         try {
+            // [TAMBAHAN] Ambil transaksi lengkap dari database agar bayar dan kembalian sesuai data asli
+            Transaksi t = transaksiDao.cariByNoTransaksi(noFaktur);
+            if (t == null) {
+                t = new Transaksi(noFaktur, kasir, waktu);
+            }
+
             List<DetailTransaksi> details = transaksiDao.ambilDetail(noFaktur);
             if (details.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Tidak ada rincian item untuk transaksi " + noFaktur);
                 return;
             }
 
-            Transaksi t = new Transaksi(noFaktur, kasir, waktu);
             for (DetailTransaksi d : details) {
                 t.tambahItem(d);
             }
-            t.setJumlahBayar(t.getTotal());
 
             Struk struk = new Struk(t);
             struk.tampilkanDialogStruk();
