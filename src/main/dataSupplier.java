@@ -17,7 +17,8 @@ import javax.swing.table.TableRowSorter;
  */
 public class dataSupplier extends javax.swing.JFrame {
      
-    koneksi con = new koneksi();
+    // [TAMBAHAN] Inisialisasi DAO untuk akses data supplier (menggantikan koneksi manual)
+    private final main.dao.SupplierDao supplierDao = new main.dao.SupplierDao();
     HashMap<String, Integer> supplier = new HashMap<String, Integer>();
     Integer id;
 
@@ -27,10 +28,9 @@ public class dataSupplier extends javax.swing.JFrame {
      */
     public dataSupplier() {
         initComponents();
-        setTitle("DATA SUPLAYER");
+        setTitle("DATA SUPPLIER");
         setLocationRelativeTo(null);
         getData();
-        System.out.println(supplier);
     }
     
     public void clear(){
@@ -41,31 +41,27 @@ public class dataSupplier extends javax.swing.JFrame {
         email.setText("");
     }
     
+    // [TAMBAHAN] Mengambil semua data supplier via SupplierDao (aman dari SQL Injection)
     private void getData() {
-        con.config();
-        
         DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
         model.setRowCount(0);
+        supplier.clear();
         
-        try{
-            String sql = "SELECT * FROM supplier";
-            try (ResultSet rs = con.stm.executeQuery(sql)) {
-                while(rs.next()){
-                    String namaSp = rs.getString("nama");
-                    String emailSp = rs.getString("email");
-                    String alamatSp = rs.getString("alamat");
-                    int npwpSp = rs.getInt("npwp");
-                    int noRekSp = rs.getInt("noRek");
-                    
-                    supplier.put(namaSp,rs.getInt("id"));
-                    Object[]rowData = {namaSp, emailSp, npwpSp, noRekSp, alamatSp};
-                    model.addRow(rowData);
-                    
-                }
+        try {
+            java.util.List<main.model.Supplier> list = supplierDao.ambilSemua();
+            for (main.model.Supplier s : list) {
+                supplier.put(s.getNama(), s.getId());
+                Object[] rowData = {
+                    s.getNama(),
+                    s.getEmail(),
+                    s.getNpwp(),
+                    s.getNoRek(),
+                    s.getAlamat()
+                };
+                model.addRow(rowData);
             }
-            
-        }catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Koneksi Gagal: " + e.getMessage());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Gagal memuat data supplier: " + e.getMessage());
         }
     }
 
@@ -372,23 +368,30 @@ public class dataSupplier extends javax.swing.JFrame {
     }//GEN-LAST:event_backActionPerformed
 
     private void addActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        try{
-            String sql = "INSERT INTO supplier (nama, email, noRek, npwp, alamat) VALUES  ('"
-            + nama.getText() + "', '"+ email.getText() +"', '"+ noRek.getText() +"', '"+ npwp.getText() 
-            +"', '"+ alamat.getText() +"' );";
-            
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Barang : BERHASIL DI TAMBAHKAN");
-                clear();
-                getData();
-            }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        // [TAMBAHAN] Tambah supplier baru via Supplier model dan SupplierDao
+        String namaSp = nama.getText().trim();
+        String emailSp = email.getText().trim();
+        String noRekSp = noRek.getText().trim();
+        String npwpSp = npwp.getText().trim();
+        String alamatSp = alamat.getText().trim();
+
+        if (namaSp.isEmpty() || emailSp.isEmpty() || noRekSp.isEmpty() || npwpSp.isEmpty() || alamatSp.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "ISI SEMUA KOLOM !!");
+            return;
         }
-        //UPDATE `supplier` SET `nama` = 'PT. WOYs', `email` = 'admin@woy.corps', `noRek` = '1100021432', `npwp` = '9988761', `alamat` = 'newYork usa' WHERE `supplier`.`id` = 1;
+
+        try {
+            main.model.Supplier sp = new main.model.Supplier(0, namaSp, emailSp, alamatSp, npwpSp, noRekSp);
+            supplierDao.simpan(sp);
+
+            JOptionPane.showMessageDialog(null, "Data Supplier : BERHASIL DITAMBAHKAN");
+            clear();
+            getData();
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(null, "Validasi Gagal: " + e.getMessage());
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
+        }
     }//GEN-LAST:event_addActionPerformed
 
     private void tbl_dataMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tbl_dataMouseClicked
@@ -412,63 +415,66 @@ public class dataSupplier extends javax.swing.JFrame {
     }//GEN-LAST:event_tbl_dataMouseClicked
 
     private void updateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateActionPerformed
-        // TODO add your handling code here:
+        // [TAMBAHAN] Update supplier via Supplier model dan SupplierDao
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+        if (selectedRow == -1 || id == null || id <= 0) {
+            JOptionPane.showMessageDialog(null, "PILIH DATA YANG AKAN DI UPDATE !!");
+            return;
         }
-        String namaSp = nama.getText();
-        String alamatSp = alamat.getText();
-        String npwpSp = npwp.getText();
-        String emailSp = email.getText();
-        String noRekSp = noRek.getText();
-        
-        if(alamatSp.isEmpty()  || namaSp.isEmpty() || npwpSp.isEmpty() || emailSp.isEmpty() || noRekSp.isEmpty() ){
-            JOptionPane.showMessageDialog(null,  "ISI SEMUA KOLOM !!");
+
+        String namaSp = nama.getText().trim();
+        String emailSp = email.getText().trim();
+        String noRekSp = noRek.getText().trim();
+        String npwpSp = npwp.getText().trim();
+        String alamatSp = alamat.getText().trim();
+
+        if (namaSp.isEmpty() || emailSp.isEmpty() || noRekSp.isEmpty() || npwpSp.isEmpty() || alamatSp.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "ISI SEMUA KOLOM !!");
+            return;
         }
-        
-        con.config();
-        try{
-            String sql = "UPDATE supplier SET nama = '"+namaSp+ "', email ='"+emailSp+"', noRek ='"+noRekSp+
-            "', npwp ='"+npwpSp+"', alamat ='"+alamatSp+"' WHERE id = "+ id +";";
-//            System.out.println(sql);
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Barang : BERHASIL DI UPDATE");
-                id = -1;
-                clear();
-                getData();
-            }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+
+        try {
+            main.model.Supplier sp = new main.model.Supplier(id, namaSp, emailSp, alamatSp, npwpSp, noRekSp);
+            supplierDao.ubah(sp);
+
+            JOptionPane.showMessageDialog(null, "Data Supplier : BERHASIL DI UPDATE");
+            id = -1;
+            clear();
+            getData();
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(null, "Validasi Gagal: " + e.getMessage());
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
         }
     }//GEN-LAST:event_updateActionPerformed
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
-        // TODO add your handling code here:
+        // [TAMBAHAN] Hapus supplier via SupplierDao (memperbaiki bug query string SQL asli)
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(null, "PILIH DATA YANG AKAN DI HAPUS !!");
+            return;
         }
         int confirm = JOptionPane.showConfirmDialog(this, "Yakin Ingin Menghapus Data Ini?", 
                 "Konfirmasi", JOptionPane.YES_NO_OPTION);
-        if(confirm == JOptionPane.YES_OPTION){
+        if (confirm == JOptionPane.YES_OPTION) {
             String namaSp = tbl_data.getValueAt(selectedRow, 0).toString();
-            
-            con.config();
-            try{
-                String sql = "DELETE FROM supplier WHERE nama = "+namaSp+" ;";
+            Integer idSp = supplier.get(namaSp);
 
-                int i = con.stm.executeUpdate(sql);
-                if(i > 0){
-                    JOptionPane.showMessageDialog(null,  "Data Barang : TELAH DI HAPUS");
-                    clear();
-                    getData();
-                }
-            }catch(SQLException e){
-                JOptionPane.showMessageDialog(null, e.getMessage());
+            if (idSp == null) {
+                JOptionPane.showMessageDialog(null, "ID Supplier tidak ditemukan!");
+                return;
             }
-            
+
+            try {
+                supplierDao.hapus(idSp);
+
+                JOptionPane.showMessageDialog(null, "Data Supplier : TELAH DI HAPUS");
+                clear();
+                getData();
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
+            }
         }
     }//GEN-LAST:event_deleteActionPerformed
 

@@ -14,7 +14,8 @@ import javax.swing.JOptionPane;
  */
 public class registrasi extends javax.swing.JFrame {
 
-    koneksi con = new koneksi();
+    // [TAMBAHAN] Inisialisasi DAO untuk akses data akun pengguna (Admin & Kasir)
+    private final main.dao.PenggunaDao penggunaDao = new main.dao.PenggunaDao();
     
     /**
      * Creates new form registrasi
@@ -227,20 +228,32 @@ public class registrasi extends javax.swing.JFrame {
     }//GEN-LAST:event_inputPassActionPerformed
 
     private void addKasirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addKasirActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        try{
-            String sql = "INSERT INTO petugaskasir (id_petugas, username, password, email) VALUES ("
-            + inputid.getText() + ", '" + inputNama.getText() + "', '"  + inputPass.getText() + "', '"
-            + inputEmail.getText() + "');";
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null, "DATA berhasil ditambahkan");
-                dispose();
-                dashbordAdmin.main(null);
-            }
-        } catch(HeadlessException | SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        // [TAMBAHAN] Registrasi Kasir baru via Kasir model dan PenggunaDao (Polymorphism)
+        String strId = inputid.getText().trim();
+        String nama = inputNama.getText().trim();
+        String pass = inputPass.getText().trim();
+        String email = inputEmail.getText().trim();
+
+        if (strId.isEmpty() || nama.isEmpty() || pass.isEmpty() || email.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Semua field harus diisi!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try {
+            int id = Integer.parseInt(strId);
+            main.model.Kasir kasirBaru = new main.model.Kasir(id, nama, pass, email);
+            // Memanggil simpan() dengan parameter polimorfik Pengguna
+            penggunaDao.simpan(kasirBaru);
+
+            JOptionPane.showMessageDialog(this, "Petugas Kasir berhasil ditambahkan!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            dispose();
+            dashbordAdmin.main(null);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "ID Karyawan harus berupa angka!", "Input Tidak Valid", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, "Validasi Gagal: " + e.getMessage(), "Kesalahan", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Database Error: " + e.getMessage(), "Kesalahan DB", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_addKasirActionPerformed
 
@@ -260,20 +273,32 @@ public class registrasi extends javax.swing.JFrame {
     }//GEN-LAST:event_backActionPerformed
 
     private void addAdminActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addAdminActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        try{
-            String sql = "INSERT INTO admin (id, username, password, email) VALUES ("
-            + inputid.getText() + ", '" + inputNama.getText() + "', '" + inputPass.getText() + "', '"
-            + inputEmail.getText() +"');";
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null, "DATA berhasil ditambahkan");
-                dispose();
-                dashbordAdmin.main(null);
-            }
-        } catch(HeadlessException | SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        // [TAMBAHAN] Registrasi Admin baru via Admin model dan PenggunaDao (Polymorphism)
+        String strId = inputid.getText().trim();
+        String nama = inputNama.getText().trim();
+        String pass = inputPass.getText().trim();
+        String email = inputEmail.getText().trim();
+
+        if (strId.isEmpty() || nama.isEmpty() || pass.isEmpty() || email.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Semua field harus diisi!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try {
+            int id = Integer.parseInt(strId);
+            main.model.Admin adminBaru = new main.model.Admin(id, nama, pass, email);
+            // Memanggil simpan() dengan parameter polimorfik Pengguna
+            penggunaDao.simpan(adminBaru);
+
+            JOptionPane.showMessageDialog(this, "Admin baru berhasil ditambahkan!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            dispose();
+            dashbordAdmin.main(null);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "ID Karyawan harus berupa angka!", "Input Tidak Valid", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, "Validasi Gagal: " + e.getMessage(), "Kesalahan", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Database Error: " + e.getMessage());
         }
     }//GEN-LAST:event_addAdminActionPerformed
 

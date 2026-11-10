@@ -187,7 +187,9 @@ public class dashbordAdmin extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void riwayatActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_riwayatActionPerformed
-        // TODO add your handling code here:
+        // [TAMBAHAN] Menampilkan halaman riwayat transaksi penjualan
+        dispose();
+        riwayatTransaksi.main(null);
     }//GEN-LAST:event_riwayatActionPerformed
 
     private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed

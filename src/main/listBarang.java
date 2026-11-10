@@ -17,7 +17,8 @@ import javax.swing.table.TableRowSorter;
  */
 public class listBarang extends javax.swing.JFrame {
      
-    koneksi con = new koneksi();
+    // [TAMBAHAN] Inisialisasi DAO untuk akses data barang (menggantikan koneksi manual)
+    private final main.dao.BarangDao barangDao = new main.dao.BarangDao();
 
     /**
      * Creates new form tambahBarang
@@ -29,28 +30,24 @@ public class listBarang extends javax.swing.JFrame {
         getData();
     }
     
+    // [TAMBAHAN] Mengambil data barang via BarangDao, menggantikan query SQL manual
     private void getData() {
-        con.config();
-        
         DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
         model.setRowCount(0);
         
-        try{
-            String sql = "SELECT * FROM databarang";
-            try (ResultSet rs = con.stm.executeQuery(sql)) {
-                while(rs.next()){
-                    BigInteger code  = new BigInteger(rs.getString("code_barang"));
-                    String nama = rs.getString("nama_barang");
-                    String Hjual = rs.getString("harga_jual");
-                    int stokB = rs.getInt("stok_barang");
-                    
-                    Object[]rowData = {code,nama, Hjual, stokB};
-                    model.addRow(rowData);
-                }
+        try {
+            java.util.List<main.model.Barang> list = barangDao.ambilSemua();
+            for (main.model.Barang b : list) {
+                Object[] rowData = {
+                    b.getKodeBarang(),
+                    b.getNamaBarang(),
+                    b.getHargaJual(),
+                    b.getStokBarang()
+                };
+                model.addRow(rowData);
             }
-            
-        }catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Koneksi Gagal: " + e.getMessage());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Gagal memuat data barang: " + e.getMessage());
         }
     }
 

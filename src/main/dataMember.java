@@ -16,14 +16,15 @@ import javax.swing.table.TableRowSorter;
  */
 public class dataMember extends javax.swing.JFrame {
      
-    koneksi con = new koneksi();
+    // [TAMBAHAN] Inisialisasi DAO untuk akses data member (menggantikan koneksi manual)
+    private final main.dao.MemberDao memberDao = new main.dao.MemberDao();
 
     /**
      * Creates new form tambahBarang
      */
     public dataMember() {
         initComponents();
-        setTitle("DATA BARANG");
+        setTitle("DATA MEMBER");
         setLocationRelativeTo(null);
         getData();
     }
@@ -35,28 +36,24 @@ public class dataMember extends javax.swing.JFrame {
         codeBarang.setText("");
     }
     
+    // [TAMBAHAN] Mengambil semua data member via MemberDao (aman dari SQL Injection)
     private void getData() {
-        con.config();
-        
         DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
         model.setRowCount(0);
         
-        try{
-            String sql = "SELECT * FROM member";
-            try (ResultSet rs = con.stm.executeQuery(sql)) {
-                while(rs.next()){
-                    int code  = rs.getInt("id_member");
-                    String nama = rs.getString("username");
-                    String noTlp = rs.getString("no_tlp");
-                    String poinM = rs.getString("poin");
-                    
-                    Object[]rowData = {code,nama, noTlp, poinM};
-                    model.addRow(rowData);
-                }
+        try {
+            java.util.List<main.model.Member> list = memberDao.ambilSemua();
+            for (main.model.Member m : list) {
+                Object[] rowData = {
+                    m.getIdMember(),
+                    m.getNamaMember(),
+                    m.getNoTelepon(),
+                    m.getPoin()
+                };
+                model.addRow(rowData);
             }
-            
-        }catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Koneksi Gagal: " + e.getMessage());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Gagal memuat data member: " + e.getMessage());
         }
     }
 
@@ -340,20 +337,27 @@ public class dataMember extends javax.swing.JFrame {
     }//GEN-LAST:event_backActionPerformed
 
     private void addActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        try{
-            String sql = "INSERT INTO member (id_member, username, no_tlp, poin) VALUES  ('"
-            + stokBarang.getText() + "', '"+ codeBarang.getText() +"', '"+ hargaBeli.getText()+"', '"+ poin.getText() +"' );";
-            
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Member : BERHASIL DI TAMBAHKAN");
-                clear();
-                getData();
-            }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        // [TAMBAHAN] Tambah member baru via Member model dan MemberDao
+        // Catatan: Variabel GUI warisan form asli menggunakan nama:
+        // stokBarang = id_member, codeBarang = nama, hargaBeli = no_tlp, poin = poin
+        try {
+            int id = Integer.parseInt(stokBarang.getText().trim());
+            String nama = codeBarang.getText().trim();
+            String noTlp = hargaBeli.getText().trim();
+            int poinNilai = Integer.parseInt(poin.getText().trim());
+
+            main.model.Member member = new main.model.Member(id, nama, noTlp, poinNilai);
+            memberDao.simpan(member);
+
+            JOptionPane.showMessageDialog(null, "Data Member : BERHASIL DITAMBAHKAN");
+            clear();
+            getData();
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Pastikan ID dan POIN berupa angka!");
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(null, "Validasi Gagal: " + e.getMessage());
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
         }
     }//GEN-LAST:event_addActionPerformed
 
@@ -376,61 +380,56 @@ public class dataMember extends javax.swing.JFrame {
     }//GEN-LAST:event_tbl_dataMouseClicked
 
     private void updateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateActionPerformed
-        // TODO add your handling code here:
+        // [TAMBAHAN] Update member via Member model dan MemberDao
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(null, "PILIH DATA YANG AKAN DI UPDATE !!");
+            return;
         }
-        String code = codeBarang.getText();
-        String Hbeli = hargaBeli.getText();
-        String stok = stokBarang.getText();
-        String poinM = poin.getText();
-        
-        if(code.isEmpty() || Hbeli.isEmpty() || stok.isEmpty()|| poinM.isEmpty() ){
-            JOptionPane.showMessageDialog(null,  "ISI SEMUA KOLOM !!");
-        }
-        
-        con.config();
-        try{
-            String sql = "UPDATE member SET id_member = '"+stok+ "', username ='"+code+
-            "', no_tlp ='"+Hbeli+"', poin ='"+poinM+"' WHERE id_member = "+ stok +";";
-            
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Member : BERHASIL DI UPDATE");
-                clear();
-                getData();
-            }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+
+        try {
+            int id = Integer.parseInt(stokBarang.getText().trim());
+            String nama = codeBarang.getText().trim();
+            String noTlp = hargaBeli.getText().trim();
+            int poinNilai = Integer.parseInt(poin.getText().trim());
+
+            main.model.Member member = new main.model.Member(id, nama, noTlp, poinNilai);
+            memberDao.ubah(member);
+
+            JOptionPane.showMessageDialog(null, "Data Member : BERHASIL DI UPDATE");
+            clear();
+            getData();
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Pastikan ID dan POIN berupa angka!");
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(null, "Validasi Gagal: " + e.getMessage());
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
         }
     }//GEN-LAST:event_updateActionPerformed
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
-        // TODO add your handling code here:
+        // [TAMBAHAN] Hapus member via MemberDao
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(null, "PILIH DATA YANG AKAN DI HAPUS !!");
+            return;
         }
         int confirm = JOptionPane.showConfirmDialog(this, "Yakin Ingin Menghapus Data Ini?", 
                 "Konfirmasi", JOptionPane.YES_NO_OPTION);
-        if(confirm == JOptionPane.YES_OPTION){
-            String stok = tbl_data.getValueAt(selectedRow, 0).toString();
-            
-            con.config();
-            try{
-                String sql = "DELETE FROM member WHERE id_member = "+stok+" ;";
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                int id = Integer.parseInt(tbl_data.getValueAt(selectedRow, 0).toString());
+                memberDao.hapus(id);
 
-                int i = con.stm.executeUpdate(sql);
-                if(i > 0){
-                    JOptionPane.showMessageDialog(null,  "Data Member : TELAH DI HAPUS");
-                    clear();
-                    getData();
-                }
-            }catch(SQLException e){
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                JOptionPane.showMessageDialog(null, "Data Member : TELAH DI HAPUS");
+                clear();
+                getData();
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "ID Member tidak valid!");
             }
-            
         }
     }//GEN-LAST:event_deleteActionPerformed
 

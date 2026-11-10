@@ -235,26 +235,32 @@ public class loginAdmin extends javax.swing.JFrame {
     }//GEN-LAST:event_backActionPerformed
 
     private void loginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loginActionPerformed
-        // TODO add your handling code here:
-        String name = username.getText();
-        String pass = password.getText();
-        
-        koneksi con = new koneksi();
-        con.config();
-        try{
-            String sql = "SELECT * FROM admin WHERE username ='" + username.getText() +"' AND password = '"+ password.getText() +"';";
-            ResultSet rs = con.stm.executeQuery(sql);
-            if(rs.next()){
-                koneksi.username = name;
-                JOptionPane.showMessageDialog(null, "Log-In Berhasil");
+        // [TAMBAHAN] Autentikasi aman menggunakan PenggunaDao dan Polymorphism Pengguna
+        String name = username.getText().trim();
+        String pass = new String(password.getPassword()).trim();
+
+        if (name.isEmpty() || pass.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Username dan password tidak boleh kosong!");
+            return;
+        }
+
+        main.dao.PenggunaDao penggunaDao = new main.dao.PenggunaDao();
+        try {
+            main.model.Pengguna pengguna = penggunaDao.login(name, pass);
+
+            // Validasi apakah pengguna ditemukan dan perannya adalah Admin
+            if (pengguna instanceof main.model.Admin) {
+                koneksi.username = pengguna.getUsername();
+                JOptionPane.showMessageDialog(this, "Log-In Berhasil sebagai " + pengguna.getUsername() + "\nHak Akses: " + pengguna.getHakAkses());
                 dispose();
                 dashbordAdmin.main(null);
-            } else{
-                  JOptionPane.showMessageDialog(null, "Log-In Gagal!!");
-
+            } else if (pengguna != null) {
+                JOptionPane.showMessageDialog(this, "Akun ini bukan Admin! Silakan login melalui menu Kasir.", "Akses Ditolak", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Log-In Gagal! Username atau password salah.", "Gagal Masuk", JOptionPane.ERROR_MESSAGE);
             }
-        } catch(SQLException e){
-            JOptionPane.showMessageDialog(null, "Koneksi Gagal : " + e.getMessage());
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Koneksi Gagal: " + e.getMessage());
         }       
     }//GEN-LAST:event_loginActionPerformed
 

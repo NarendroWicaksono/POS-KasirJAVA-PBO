@@ -1,0 +1,6 @@
+# [TAMBAHAN] File hasil kompilasi dan distribusi
+build/
+dist/
+*.class
+nbproject/private/
+

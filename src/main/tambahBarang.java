@@ -37,29 +37,28 @@ public class tambahBarang extends javax.swing.JFrame {
         hargaJual.setText("");
     }
     
+    // [TAMBAHAN] Inisialisasi DAO untuk akses data barang
+    private final main.dao.BarangDao barangDao = new main.dao.BarangDao();
+
     private void getData() {
-        con.config();
-        
         DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
         model.setRowCount(0);
         
-        try{
-            String sql = "SELECT * FROM databarang";
-            try (ResultSet rs = con.stm.executeQuery(sql)) {
-                while(rs.next()){
-                    BigInteger code  = new BigInteger(rs.getString("code_barang"));
-                    String nama = rs.getString("nama_barang");
-                    String Hbeli = rs.getString("harga_beli");
-                    String Hjual = rs.getString("harga_jual");
-                    int stokB = rs.getInt("stok_barang");
-                    
-                    Object[]rowData = {code,nama,stokB, Hbeli, Hjual};
-                    model.addRow(rowData);
-                }
+        try {
+            // [TAMBAHAN] Mengambil semua data barang via BarangDao
+            java.util.List<main.model.Barang> list = barangDao.ambilSemua();
+            for (main.model.Barang b : list) {
+                Object[] rowData = {
+                    b.getKodeBarang(),
+                    b.getNamaBarang(),
+                    b.getStokBarang(),
+                    b.getHargaBeli(),
+                    b.getHargaJual()
+                };
+                model.addRow(rowData);
             }
-            
-        }catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Koneksi Gagal: " + e.getMessage());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Gagal memuat data barang: " + e.getMessage());
         }
     }
 
@@ -362,21 +361,26 @@ public class tambahBarang extends javax.swing.JFrame {
     }//GEN-LAST:event_backActionPerformed
 
     private void addActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        try{
-            String sql = "INSERT INTO databarang (code_barang, nama_barang, harga_beli, harga_jual, stok_barang) VALUES  ('"
-            + codeBarang.getText() + "', '"+ namaBarang.getText() +"', '"+ hargaBeli.getText() +"', '"+ hargaJual.getText() 
-            +"', '"+ stokBarang.getText() +"' );";
-            
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Barang : BERHASIL DI TAMBAHKAN");
-                clear();
-                getData();
-            }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        // [TAMBAHAN] Menambah barang baru via Barang model dan BarangDao
+        try {
+            long kode = Long.parseLong(codeBarang.getText().trim());
+            String nama = namaBarang.getText().trim();
+            int hbeli = Integer.parseInt(hargaBeli.getText().trim());
+            int hjual = Integer.parseInt(hargaJual.getText().trim());
+            int stok = Integer.parseInt(stokBarang.getText().trim());
+
+            main.model.Barang barang = new main.model.Barang(kode, nama, hbeli, hjual, stok);
+            barangDao.simpan(barang);
+
+            JOptionPane.showMessageDialog(null, "Data Barang : BERHASIL DITAMBAHKAN");
+            clear();
+            getData();
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Pastikan Kode, Harga, dan Stok berupa angka!");
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(null, "Validasi Gagal: " + e.getMessage());
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
         }
     }//GEN-LAST:event_addActionPerformed
 
@@ -400,62 +404,55 @@ public class tambahBarang extends javax.swing.JFrame {
     }//GEN-LAST:event_tbl_dataMouseClicked
 
     private void updateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateActionPerformed
-        // TODO add your handling code here:
+        // [TAMBAHAN] Memperbarui barang via Barang model dan BarangDao
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(null, "PILIH DATA YANG AKAN DI UPDATE !!");
+            return;
         }
-        String code = codeBarang.getText();
-        String nama = namaBarang.getText();
-        String Hbeli = hargaBeli.getText();
-        String Hjual = hargaJual.getText();
-        String stok = stokBarang.getText();
-        
-        if(code.isEmpty() || nama.isEmpty() || Hbeli.isEmpty() || Hjual.isEmpty() || stok.isEmpty() ){
-            JOptionPane.showMessageDialog(null,  "ISI SEMUA KOLOM !!");
-        }
-        
-        con.config();
-        try{
-            String sql = "UPDATE databarang SET nama_barang = '"+nama+ "', harga_beli ='"+Hbeli+"', harga_jual ='"+Hjual+
-            "', stok_barang ='"+stok+"' WHERE code_barang = "+ code +";";
-            
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Barang : BERHASIL DI UPDATE");
-                clear();
-                getData();
-            }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+
+        try {
+            long kode = Long.parseLong(codeBarang.getText().trim());
+            String nama = namaBarang.getText().trim();
+            int hbeli = Integer.parseInt(hargaBeli.getText().trim());
+            int hjual = Integer.parseInt(hargaJual.getText().trim());
+            int stok = Integer.parseInt(stokBarang.getText().trim());
+
+            main.model.Barang barang = new main.model.Barang(kode, nama, hbeli, hjual, stok);
+            barangDao.ubah(barang);
+
+            JOptionPane.showMessageDialog(null, "Data Barang : BERHASIL DI UPDATE");
+            clear();
+            getData();
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Pastikan Kode, Harga, dan Stok berupa angka!");
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(null, "Validasi Gagal: " + e.getMessage());
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
         }
     }//GEN-LAST:event_updateActionPerformed
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
-        // TODO add your handling code here:
+        // [TAMBAHAN] Menghapus barang via BarangDao
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(null, "PILIH DATA YANG AKAN DI HAPUS !!");
+            return;
         }
         int confirm = JOptionPane.showConfirmDialog(this, "Yakin Ingin Menghapus Data Ini?", 
                 "Konfirmasi", JOptionPane.YES_NO_OPTION);
-        if(confirm == JOptionPane.YES_OPTION){
-            String code = tbl_data.getValueAt(selectedRow, 0).toString();
-            
-            con.config();
-            try{
-                String sql = "DELETE FROM databarang WHERE code_barang = "+code+" ;";
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                long kode = Long.parseLong(tbl_data.getValueAt(selectedRow, 0).toString());
+                barangDao.hapus(kode);
 
-                int i = con.stm.executeUpdate(sql);
-                if(i > 0){
-                    JOptionPane.showMessageDialog(null,  "Data Barang : TELAH DI HAPUS");
-                    clear();
-                    getData();
-                }
-            }catch(SQLException e){
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                JOptionPane.showMessageDialog(null, "Data Barang : TELAH DI HAPUS");
+                clear();
+                getData();
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
             }
-            
         }
     }//GEN-LAST:event_deleteActionPerformed
 

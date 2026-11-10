@@ -593,27 +593,94 @@ public class dashbordKasir extends javax.swing.JFrame {
     }//GEN-LAST:event_txtBayarKeyPressed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        String totalString = totalAtas.getText().replace("Rp. ", "").trim();
+        // [TAMBAHAN] Pemrosesan transaksi penjualan menggunakan TransaksiDao & Struk
+        DefaultTableModel tabel = (DefaultTableModel) tbls.getModel();
+        int rowCount = tabel.getRowCount();
+
+        if (rowCount == 0) {
+            JOptionPane.showMessageDialog(this, "Keranjang belanja masih kosong!");
+            return;
+        }
+
+        String totalString = totalAtas.getText().replace("Rp. ", "").replace(".", "").replace(",", "").trim();
+        String bayarString = txtBayar.getText().replace("Rp. ", "").replace(".", "").replace(",", "").trim();
+
+        if (bayarString.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Silakan masukkan nominal pembayaran pelanggan!");
+            txtBayar.requestFocus();
+            return;
+        }
+
+        long total;
+        long bayar;
+        try {
+            total = Long.parseLong(totalString);
+            bayar = Long.parseLong(bayarString);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Format angka pembayaran tidak valid!");
+            return;
+        }
+
+        if (bayar < total) {
+            JOptionPane.showMessageDialog(this, "Uang pembayaran kurang! Kurang: Rp. " + (total - bayar));
+            return;
+        }
+
+        long kembalian = bayar - total;
+        txtKembali.setText(String.valueOf(kembalian));
+
+        String noFaktur = txtNoTransaksi.getText();
         String petugas = txtkasir.getText().replace("Kasir : ", "").trim();
         String waktu = txtJam.getText().replace("<html>", "").replace("<br>", " | ").replace("</html>", "").trim();
-        long total = Integer.parseInt(totalString);
-        try {
-            String sql = "INSERT INTO transaksi (no_transaksi, petugas_kasir, total, waktu_transaksi) VALUES  ('"
-                    + txtNoTransaksi.getText() + "', '" + petugas + "', '" + total + "', '" + waktu
-                    + "' );";
 
-            int i = con.stm.executeUpdate(sql);
-            if (i > 0) {
-                DefaultTableModel refresh = (DefaultTableModel) tbls.getModel();
-                JOptionPane.showMessageDialog(null, "<html> Transaksi Berhasil <br>"+ waktu +"<br> KEMBALIAN : Rp. "+txtKembali.getText()+"</html>");
-                clear();
-                refresh.setNumRows(0);
+        main.model.Transaksi transaksi = new main.model.Transaksi(noFaktur, petugas, waktu);
+        transaksi.setJumlahBayar(bayar);
+
+        // Ambil setiap baris item dari tabel transaksi
+        main.dao.BarangDao barangDao = new main.dao.BarangDao();
+        for (int i = 0; i < rowCount; i++) {
+            String namaBarang = tabel.getValueAt(i, 0).toString();
+            int harga = Integer.parseInt(tabel.getValueAt(i, 1).toString());
+            int qty = Integer.parseInt(tabel.getValueAt(i, 2).toString());
+
+            // Cari kode barang dari nama
+            long kodeBarang = 0;
+            try {
+                con.config();
+                String sqlKode = "SELECT code_barang FROM databarang WHERE nama_barang = ? LIMIT 1";
+                try (java.sql.PreparedStatement ps = con.con.prepareStatement(sqlKode)) {
+                    ps.setString(1, namaBarang);
+                    try (java.sql.ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            kodeBarang = rs.getLong("code_barang");
+                        }
+                    }
+                }
+            } catch (java.sql.SQLException ex) {
+                // Abaikan jika fallback
             }
-            
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+
+            main.model.DetailTransaksi detail = new main.model.DetailTransaksi(noFaktur, kodeBarang, namaBarang, harga, qty);
+            transaksi.tambahItem(detail);
+        }
+
+        // Simpan transaksi secara atomik melalui TransaksiDao
+        main.dao.TransaksiDao transaksiDao = new main.dao.TransaksiDao();
+        try {
+            transaksiDao.simpan(transaksi);
+
+            // [TAMBAHAN] Tampilkan dialog struk belanja interaktif
+            main.model.Struk struk = new main.model.Struk(transaksi);
+            struk.tampilkanDialogStruk();
+
+            // Bersihkan form dan buat nomor faktur baru
+            clear();
+            tabel.setNumRows(0);
+            txtNoTransaksi.setText(noFaktur());
+            JOptionPane.showMessageDialog(this, "Transaksi berhasil diproses dan disimpan!");
+
+        } catch (java.sql.SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memproses transaksi: " + e.getMessage(), "Kesalahan Transaksi", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_jButton1ActionPerformed
 
