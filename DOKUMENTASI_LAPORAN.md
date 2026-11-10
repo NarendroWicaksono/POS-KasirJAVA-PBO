@@ -334,12 +334,11 @@ classDiagram
 
     class koneksi {
         <<utility>>
-        +Connection con$
-        +Statement stm$
-        +String username$
-        +String hakAkses$
+        +Connection con
+        +Statement stm
+        +username$ String
         +buka()$ Connection
-        +config()$ void
+        +config() void
     }
 
     InterfaceDao~Barang~ <|.. BarangDao : Realisasi
@@ -403,10 +402,12 @@ sequenceDiagram
         Form->>P: getHakAkses()
         Form->>P: tampilkanMenu()
         Form-->>User: Buka Dashboard tujuan & tutup form login
-    else Peran Tidak Sesuai Form
-        Form-->>User: Dialog "Akses Ditolak: Anda tidak memiliki hak akses!"
+    else Peran Tidak Sesuai Form (Admin login via form Kasir)
+        Form-->>User: Dialog "Akun ini bukan Admin! Silakan login melalui menu Kasir."
+    else Peran Tidak Sesuai Form (Kasir login via form Admin)
+        Form-->>User: Dialog "Akun ini terdaftar sebagai Admin! Silakan login melalui menu Admin."
     else Login Gagal (null)
-        Form-->>User: Dialog "Username atau Password salah!"
+        Form-->>User: Dialog "Log-In Gagal! Username atau password salah."
     end
 ```
 
@@ -447,7 +448,7 @@ sequenceDiagram
         TDao->>BDao: kurangiStok(con, kodeBarang, qty)
         BDao->>DB: UPDATE databarang SET stok_barang = stok_barang - ? WHERE code_barang = ? AND stok_barang >= ?
         alt Stok Tidak Cukup (baris terpengaruh == 0)
-            BDao-->>TDao: throw SQLException("Stok barang tidak mencukupi!")
+            BDao-->>TDao: throw SQLException("Gagal memproses transaksi: Stok barang dengan kode [kodeBarang] tidak mencukupi!")
         end
     end
 
@@ -536,7 +537,7 @@ erDiagram
         int id PK
         varchar nama
         varchar email
-        text alamat
+        varchar alamat
         varchar npwp
         varchar noRek
     }
@@ -657,7 +658,7 @@ Aplikasi diorganisasikan ke dalam tiga package utama:
   - `InterfaceDao<T>` menyediakan cetak biru baku metode CRUD (`simpan`, `ubah`, `hapus`, `ambilSemua`, `cariById`) menggunakan Java Generic `<T>`. Kelas DAO mengimplementasikan kontrak ini tanpa mengikat antarmuka GUI pada implementasi basis data tertentu.
   - `Pengguna` adalah kelas abstrak yang tidak dapat diinstansiasi secara langsung. Mendeklarasikan method abstrak:
     - `public abstract String getHakAkses();`
-    - `public abstract void tampilkanMenu();`
+    - `public abstract String[] tampilkanMenu();`
     - `public abstract String getDashboardTujuan();`
     Setiap turunan diwajibkan mendefinisikan perilaku konkret sesuai hak aksesnya masing-masing.
 

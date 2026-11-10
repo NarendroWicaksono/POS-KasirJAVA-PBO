@@ -45,11 +45,11 @@ Sistem memisahkan tanggung jawab kode menjadi 3 lapisan terisolasi:
 POS-KasirJAVA-PBO/
 ├── .gitignore               # Daftar pengabaian berkas kompilasi (build/, dist/)
 ├── build.xml                # Skrip Apache Ant bawaan NetBeans
-├── schema_tambahan.sql      # Skrip DDL tabel detail_transaksi
-├── schema_relasi.sql        # Skrip DDL kolom bayar, kembalian, id_supplier, dan id_member
+├── database_kasir.sql       # Dump basis data kasir lengkap (skema tabel & data contoh)
+├── schema_tambahan.sql      # Skrip DDL tabel detail_transaksi (khusus migrasi database lama)
+├── schema_relasi.sql        # Skrip DDL kolom & relasi baru (khusus migrasi database lama)
 ├── DOKUMENTASI_LAPORAN.md   # Laporan lengkap sistem (Pendahuluan, OOA, OOD, OOP, ERD)
 ├── README.md                # Panduan teknis proyek (berkas ini)
-├── lib/                     # Direktori pustaka JDBC Driver MySQL
 └── src/
     └── main/
         ├── MenuUtama.java           # Jendela pembuka utama aplikasi
@@ -96,7 +96,9 @@ POS-KasirJAVA-PBO/
   - User: `root`
   - Password: `(kosong / default)`
   - Nama Database: `kasir`
-- **Driver JDBC**: `mysql-connector-java.jar` (versi 5.1.49 atau versi 8.x) diletakkan di dalam folder `lib/`.
+- **Driver JDBC**: MySQL Connector/J (`mysql-connector-java.jar`, versi 5.1.49 atau 8.x).  
+  Driver **tidak disertakan** di dalam repositori ini. Unduh dari [situs resmi MySQL](https://dev.mysql.com/downloads/connector/j/), lalu tambahkan ke proyek secara manual melalui panel **Project → klik kanan Libraries → Add JAR/Folder**.  
+  > **Catatan**: Berkas `nbproject/project.properties` di repo ini merujuk path absolut milik pengembang asli (`D:\SCHOOL\PBO\...`). Setelah menambahkan JAR, NetBeans akan memperbarui path tersebut secara otomatis sesuai komputer Anda.
 
 ---
 
@@ -106,36 +108,33 @@ Ikuti tahapan instalasi basis data dan kompilasi berikut secara berurutan:
 
 ### 1. Persiapan Basis Data MySQL
 1. Jalankan service **MySQL** melalui XAMPP Control Panel (pastikan port `3306` aktif).
-2. Buka antarmuka manajemen basis data (seperti phpMyAdmin pada browser `http://localhost/phpmyadmin` atau HeidiSQL / MySQL Workbench).
-3. Buat basis data baru bernama `kasir`:
-   ```sql
-   CREATE DATABASE IF NOT EXISTS `kasir`;
-   USE `kasir`;
-   ```
-4. Eksekusi skrip SQL dengan urutan berikut:
-   - **Skrip SQL Asli Bawaan**: Import tabel-tabel utama (`admin`, `petugaskasir`, `databarang`, `member`, `supplier`, `transaksi`).
-   - **Skrip [`schema_tambahan.sql`](file:///c:/Users/NITRO/Downloads/POS-KasirJAVA-PBO/schema_tambahan.sql)**: Mengeksekusi pembuatan tabel `detail_transaksi` untuk menyimpan rincian item belanja.
-   - **Skrip [`schema_relasi.sql`](file:///c:/Users/NITRO/Downloads/POS-KasirJAVA-PBO/schema_relasi.sql)**: Berisi blok DDL pembaruan skema relasi yang dieksekusi berurutan:
-     - Tahap 1: Menambahkan kolom `bayar` dan `kembalian` pada tabel `transaksi`.
-     - Tahap 2: Menambahkan kolom `id_supplier` (FK ke `supplier.id` ON DELETE SET NULL) pada tabel `databarang`.
-     - Tahap 3: Menambahkan kolom `id_member` (FK ke `member.id_member` ON DELETE SET NULL) pada tabel `transaksi`.  
-     *(Perhatian: Eksekusi skrip relasi ini per blok sesuai kebutuhan dan jangan diulang kembali bila kolom sudah terbentuk di basis data).*
+2. Buka antarmuka phpMyAdmin pada peramban web (`http://localhost/phpmyadmin`).
+3. Masuk ke tab **Impor** (atau **Import**), klik tombol **Choose File**, pilih berkas `database_kasir.sql`, lalu klik tombol **Impor** / **Kirim** di bagian bawah.
+   - Skrip ini akan secara otomatis membuat basis data `kasir` beserta seluruh tabel lengkap (`admin`, `petugaskasir`, `supplier`, `databarang`, `member`, `transaksi`, `detail_transaksi`) dan data contoh yang siap digunakan.
+4. **Catatan Skrip Pembaruan Migrasi**:
+   - Berkas [`schema_tambahan.sql`](schema_tambahan.sql) dan [`schema_relasi.sql`](schema_relasi.sql) **hanya digunakan untuk memperbarui basis data lama** yang dibuat sebelum relasi ditambahkan.
+   - Pada instalasi baru yang menggunakan `database_kasir.sql`, kedua berkas skrip tersebut **tidak perlu dijalankan**.
 
 ### 2. Membuka dan Menjalankan Proyek di Apache NetBeans
 1. Buka **Apache NetBeans IDE**.
 2. Pilih menu **File** ➡️ **Open Project**, lalu pilih folder proyek `POS-KasirJAVA-PBO`.
 3. Tambahkan driver MySQL JDBC ke proyek jika belum ada:
-   - Pada panel Project, klik kanan pada node **Libraries** ➡️ **Add JAR/Folder...**.
-   - Pilih file `mysql-connector-java-5.1.49.jar` atau `mysql-connector-j-8.x.jar` dari folder `lib/`.
+   - Unduh MySQL Connector/J dari [situs resmi MySQL](https://dev.mysql.com/downloads/connector/j/).
+   - Pada panel Project, klik kanan pada node **Libraries** ➡️ **Add JAR/Folder...**, lalu pilih file JAR yang sudah diunduh.
+   - **Catatan**: `nbproject/project.properties` di repo ini merujuk path absolut pengembang asli dan akan diperbarui otomatis oleh NetBeans setelah JAR ditambahkan.
 4. Klik kanan nama proyek pada panel Projects, lalu pilih **Clean and Build**.
 5. Untuk menjalankan sistem, klik kanan file `src/main/MenuUtama.java`, lalu pilih **Run File** (atau tekan `Shift + F6`).
 
 ---
 
-## 👤 Akun Uji Coba
+## 👤 Akun Uji Coba (Default Credentials)
 
-Akun pengguna tidak disediakan secara baku di dalam skrip basis data:
-> **Buat akun melalui menu Registrasi** pada aplikasi dengan masuk melalui menu registrasi administrator untuk membuat akun Admin atau Kasir baru.
+Sesuai dengan data akun bawaan yang tercantum di dalam `database_kasir.sql`, akun pengujian berikut dapat langsung digunakan:
+
+| Peran Akun | Form Login | Username | Password | Hak Akses & Keterangan |
+| :--- | :--- | :--- | :--- | :--- |
+| **Administrator** | Login Admin | `admin` | `admin123` | Akses penuh dashboard admin: kelola barang, supplier, member, registrasi karyawan, dan riwayat transaksi. |
+| **Petugas Kasir** | Login Kasir | `kasir1` | `kasir123` | Akses kasir: transaksi penjualan, pemilihan member, kalkulasi poin reward, dan cetak struk nota belanja. |
 
 ---
 
