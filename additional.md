@@ -1,4 +1,4 @@
-# 🎓 PANDUAN DEFENSE & TANYA JAWAB INDIVIDUAL TUGAS BESAR PBO
+
 > **Mata Kuliah**: Pemrograman Berorientasi Objek (PBO)  
 > **Projek**: Aplikasi Kasir & Point of Sale (POS) Toko Retail  
 > **Bahasa & Platform**: Java Swing + MySQL Database
@@ -59,7 +59,6 @@
 
 ---
 
-## ❓ 3. 15 PERTANYAAN DOSEN PENGUJI BESERTA JAWABAN ILMIAH
 
 ### Q1: "Mengapa Anda memisahkan kode antara package `main`, `main.model`, dan `main.dao`?"
 > **Jawaban Mahasiswa:**  
