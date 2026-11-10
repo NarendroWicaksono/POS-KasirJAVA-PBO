@@ -153,6 +153,10 @@ public class Transaksi {
         // terapkan diskon
         long nilaiDiskon = (subtotal * diskon) / 100;
         this.total = subtotal - nilaiDiskon;
+        // [TAMBAHAN] Perbarui kembalian agar konsisten meskipun setJumlahBayar dipanggil sebelum tambahItem
+        if (this.jumlahBayar > 0) {
+            this.kembalian = this.jumlahBayar - this.total;
+        }
         return this.total;
     }
 

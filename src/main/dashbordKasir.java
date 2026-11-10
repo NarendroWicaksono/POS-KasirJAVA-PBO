@@ -714,7 +714,6 @@ public class dashbordKasir extends javax.swing.JFrame {
         String waktu = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         main.model.Transaksi transaksi = new main.model.Transaksi(noFaktur, petugas, waktu);
-        transaksi.setJumlahBayar(bayar);
 
         // [TAMBAHAN] Pasang objek Member yang dipilih (jika ada) ke Transaksi
         main.model.Member memberTerpilih = getSelectedMember();
@@ -742,6 +741,9 @@ public class dashbordKasir extends javax.swing.JFrame {
             main.model.DetailTransaksi detail = new main.model.DetailTransaksi(noFaktur, kodeBarang, namaBarang, harga, qty);
             transaksi.tambahItem(detail);
         }
+
+        // [TAMBAHAN] Set bayar SETELAH semua item ditambahkan agar total sudah benar saat kembalian dihitung
+        transaksi.setJumlahBayar(bayar);
 
         // Simpan transaksi secara atomik melalui TransaksiDao
         try {
