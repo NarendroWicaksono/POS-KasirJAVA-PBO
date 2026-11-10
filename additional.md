@@ -60,8 +60,7 @@
 ---
 
 
-### Q1: "Mengapa Anda memisahkan kode antara package `main`, `main.model`, dan `main.dao`?"
-> **Jawaban Mahasiswa:**  
+### Q1: "Mengapa Anda memisahkan kode antara package `main`, `main.model`, dan `main.dao`?"  
 > "Kami menerapkan prinsip arsitektur **Separation of Concerns (SoC)** atau arsitektur berlapis. Kode asli sistem ini sebelumnya menumpuk logika tampilan, logika bisnis, dan query SQL dalam satu file JFrame, yang membuat kode sulit diuji dan rawan error. Dengan memisahkannya:
 > - `main` murni bertugas mengatur antarmuka pengguna (UI/Swing).
 > - `main.model` merepresentasikan entitas bisnis dan memegang aturan validasi domain (OOP murni).
@@ -71,7 +70,6 @@
 ---
 
 ### Q2: "Di mana Anda menerapkan Abstraction? Apa beda Interface dan Abstract Class di proyek Anda?"
-> **Jawaban Mahasiswa:**  
 > "Abstraction kami terapkan di dua tempat:
 > 1. **Interface `InterfaceDao<T>`**: Mendefinisikan kontrak perilaku umum operasi persistensi data CRUD. Interface ini memakai generic `<T>`, sehingga bisa diimplementasikan oleh `BarangDao`, `MemberDao`, `SupplierDao`, dan `PenggunaDao`.
 > 2. **Abstract Class `Pengguna`**: Menyediakan blueprint entitas pengguna sekaligus menurunkan atribut bersama (`id`, `username`, `password`, `email`). Di dalamnya terdapat abstract method `getHakAkses()` dan `getDashboardTujuan()`.
@@ -80,7 +78,6 @@
 ---
 
 ### Q3: "Tunjukkan di mana Anda menerapkan Polymorphism dinamis (Overriding)!"
-> **Jawaban Mahasiswa:**  
 > "Polymorphism dinamis terlihat jelas pada pewarisan kelas `Pengguna` ke kelas `Admin` dan `Kasir`:
 > Pada method `getHakAkses()`, kelas `Admin` melakukan `@Override` untuk mengembalikan *'ADMINISTRATOR_FULL_ACCESS'*, sedangkan kelas `Kasir` mengembalikan *'KASIR_TRANSAKSI_PENJUALAN'*.
 > Ketika `PenggunaDao.login()` dipanggil, tipe kembalian variabelnya adalah kelas induk `Pengguna`. Namun pada saat runtime di form login, pemanggilan `pengguna.getHakAkses()` secara dinamis mengeksekusi method milik subclass yang sebenarnya (baik `Admin` maupun `Kasir`)."
@@ -88,7 +85,6 @@
 ---
 
 ### Q4: "Apakah ada penerapan Method Overloading (Polymorphism Statis)? Di mana letaknya?"
-> **Jawaban Mahasiswa:**  
 > "Ada, kami menerapkannya di class `main.dao.BarangDao` pada method `cari`:
 > 1. `public Barang cari(long kodeBarang)` : mencari satu barang spesifik berdasarkan Primary Key `code_barang`.
 > 2. `public List<Barang> cari(String namaBarang)` : mencari daftar barang berdasarkan kecocokan nama (`LIKE ?`).
@@ -97,22 +93,19 @@
 
 ---
 
-### Q5: "Mengapa atribut di class model harus dibuat `private`? Kenapa tidak `public` saja supaya mudah diakses?"
-> **Jawaban Mahasiswa:**  
+### Q5: "Mengapa atribut di class model harus dibuat `private`? Kenapa tidak `public` saja supaya mudah diakses?" 
 > "Itu merupakan prinsip fundamental **Encapsulation**. Jika atribut dibuat `public`, bagian luar sistem (misalnya event handler GUI) bisa mengubah isi variabel secara bebas dan tidak terkontrol, misalnya mengisi stok barang dengan nilai negatif (-10) atau harga jual Rp 0.  
 > Dengan atribut `private`, semua akses harus melewati `setter` yang sudah ditanami logika validasi (misalnya di `Barang.java`: jika stok < 0, sistem melempar `IllegalArgumentException`). Dengan demikian, integritas status objek selalu terjaga (*data integrity*)."
 
 ---
 
 ### Q6: "Bagaimana sistem Anda mencegah terjadinya SQL Injection?"
-> **Jawaban Mahasiswa:**  
 > "Pada kode asli terdahulu, query ditulis dengan konkatenasi string biasa seperti `"SELECT * FROM admin WHERE username = '" + username.getText() + "'"` yang sangat rentan SQL Injection.  
 > Pada versi refactoring ini, seluruh query di package `main.dao` telah diganti 100% menggunakan **`PreparedStatement`** dengan parameter penampung tanda tanya (`?`). Nilai input pengguna dikirim terpisah dari struktur perintah SQL via method seperti `ps.setString(1, username)`, sehingga database memperlakukan masukan pengguna murni sebagai data literal, bukan sebagai kode instruksi SQL yang dapat dieksekusi."
 
 ---
 
 ### Q7: "Apa yang terjadi jika saat transaksi kasir, koneksi listrik putus saat stok barang sedang dikurangi? Bagaimana Anda menjamin integritas datanya?"
-> **Jawaban Mahasiswa:**  
 > "Kami menerapkan **Database Transaction Management** secara atomik (*ACID properties*) di `TransaksiDao.simpanTransaksiLengkap()`.
 > Kami mematikan mode autocommit melalui `con.setAutoCommit(false)`. Urutan operasi penyimpanan:
 > 1. Simpan header `transaksi`
@@ -123,47 +116,40 @@
 
 ---
 
-### Q8: "Apa relasi antara class `Transaksi` dan `DetailTransaksi`?"
-> **Jawaban Mahasiswa:**  
+### Q8: "Apa relasi antara class `Transaksi` dan `DetailTransaksi`?"  
 > "Relasinya adalah **Komposisi (Composition)**, yang merupakan bentuk relasi *has-a* yang kuat.  
 > Class `Transaksi` memiliki atribut `List<DetailTransaksi> daftarDetail`. Sebuah `DetailTransaksi` tidak memiliki eksistensi mandiri tanpa adanya objek `Transaksi` induk tempat ia terikat. Jika suatu transaksi dihapus atau dibatalkan, maka seluruh rincian item transaksi di dalamnya ikut terhapus."
 
 ---
 
 ### Q9: "Mengapa Anda menggunakan try-with-resources pada koneksi database di DAO?"
-> **Jawaban Mahasiswa:**  
 > "Karena `Connection`, `PreparedStatement`, dan `ResultSet` mengimplementasikan interface `java.lang.AutoCloseable`. Dengan sintaks `try (Connection con = bukaKoneksi(); PreparedStatement ps = con.prepareStatement(sql))`, Java akan secara otomatis menutup koneksi tersebut ketika blok try selesai, baik itu selesai normal maupun saat terjadi exception. Ini mencegah terjadinya **memory leak** dan penumpukan koneksi menggantung (*connection leak*) di server MySQL."
 
 ---
 
 ### Q10: "Bagaimana cara kerja class `Struk`?"
-> **Jawaban Mahasiswa:**  
 > "Class `Struk` bertugas memformat informasi dari objek `Transaksi` menjadi teks nota kasir yang rapi (menampilkan nomor transaksi, nama kasir, daftar barang, jumlah, subtotal, total harga, uang bayar, dan kembalian).  
 > Method `tampilkanDialog()` menampilkan nota dalam pop-up dialog monospaced (`Font.MONOSPACED`), dan menyediakan opsi interaktif bagi kasir untuk langsung menyimpannya ke dalam file teks `.txt` di penyimpanan komputer via `simpanKeFile()`."
 
 ---
 
 ### Q11: "Apa fungsi keyword `super` pada konstruktor `Admin` dan `Kasir`?"
-> **Jawaban Mahasiswa:**  
 > "Keyword `super(id, username, password, email)` digunakan untuk memanggil konstruktor milik superclass-nya, yaitu `Pengguna`. Ini memastikan bahwa inisialisasi atribut-atribut dasar yang dideklarasikan di kelas induk dijalankan dengan benar sebelum subclass menambahkan logika spesifik miliknya."
 
 ---
 
-### Q12: "Bagaimana Anda menangani validasi input jika pengguna memasukkan huruf pada field harga atau stok?"
-> **Jawaban Mahasiswa:**  
+### Q12: "Bagaimana Anda menangani validasi input jika pengguna memasukkan huruf pada field harga atau stok?" 
 > "Pada event handler GUI (seperti di `tambahBarang`, `dataMember`, dan `dashbordKasir`), konversi string ke angka dilakukan di dalam blok `try-catch` yang menangkap **`NumberFormatException`**.  
 > Jika pengguna memasukkan karakter non-angka, eksekusi kode tidak akan *crash*, melainkan sistem menangkap exception tersebut dan menampilkan pesan dialog ramah: *'Pastikan Kode, Harga, dan Stok berupa angka!'*."
 
 ---
 
 ### Q13: "Mengapa file `config.java` asli tidak Anda gunakan dan di-exclude?"
-> **Jawaban Mahasiswa:**  
 > "Berdasarkan audit teknis kami, file `config.java` bawaan repo lama sudah usang dan rusak: file tersebut mengimpor driver kuno `com.mysql.jdbc.Driver` yang sudah di-*deprecate*, memiliki sintaks URL JDBC yang keliru, dan sama sekali tidak pernah dipakai oleh form manapun di proyek asli. Oleh karena itu, koneksi kami standarisasi langsung secara aman di tiap kelas DAO menggunakan konektor modern."
 
 ---
 
-### Q14: "Jelaskan alur polimorfisme pada form `registrasi.java`!"
-> **Jawaban Mahasiswa:**  
+### Q14: "Jelaskan alur polimorfisme pada form `registrasi.java`!" 
 > "Di `registrasi.java`, terdapat tombol *+ Tambah Kasir* dan *+ Tambah Admin*.
 > - Ketika tombol kasir ditekan, form membuat objek `new Kasir(...)`.
 > - Ketika tombol admin ditekan, form membuat objek `new Admin(...)`.
@@ -173,8 +159,7 @@
 
 ---
 
-### Q15: "Jika aplikasi ini ingin dikembangkan ke skala produksi (enterprise), apa rekomendasi perbaikan Anda selanjutnya?"
-> **Jawaban Mahasiswa:**  
+### Q15: "Jika aplikasi ini ingin dikembangkan ke skala produksi (enterprise), apa rekomendasi perbaikan Anda selanjutnya?"  
 > "Terdapat tiga poin peningkatan utama:
 > 1. **Password Hashing**: Mengganti penyimpanan plaintext password di database dengan enkripsi hash modern bergaram seperti **BCrypt** atau **PBKDF2** agar data kredensial tidak terbaca jika database bocor.
 > 2. **Connection Pooling**: Menggunakan connection pool seperti **HikariCP** agar pembukaan koneksi database tidak dilakukan berulang kali per query (*overhead cost*).
