@@ -1,133 +1,41 @@
-# 🛒 Sistem Informasi Kasir & Point of Sale (POS) Toko
+# 🛒 Sistem Informasi Point of Sale (POS) Kasir Toko Retail
 > **Tugas Projek Mata Kuliah Pemrograman Berorientasi Objek (PBO)**  
-> Berbasis Java Swing Desktop & MySQL Database.
+> Berbasis Java Swing Desktop & Basis Data MySQL.
 
 ---
 
-## 📌 Ringkasan & Informasi Proyek (Legacy & Modern Refactoring)
+## 📌 Deskripsi Proyek
 
-Aplikasi ini merupakan sistem **Point of Sale (POS)** berbasis desktop untuk manajemen transaksi toko retail, pengelolaan stok barang, data member, supplier, serta pencatatan riwayat transaksi dan struk belanja.
+Aplikasi ini merupakan sistem **Point of Sale (POS)** berbasis desktop untuk manajemen operasional kasir pada toko retail. Sistem mencakup pemrosesan transaksi penjualan, pengelolaan master barang dan stok, pencatatan pemasok (supplier), pengelolaan pelanggan terdaftar (member) dengan sistem poin loyalitas reward, serta pelaporan riwayat penjualan dan cetak nota belanja.
 
-Awalnya proyek ini merupakan kode warisan (*legacy project*) dengan struktur monolitik prosedural (query SQL langsung di dalam event handler JFrame). Melalui audit dan refactoring berorientasi objek (OOP), proyek ini kini telah dipisahkan menjadi arsitektur berlapis:
-1. **Layer Presentation (GUI)**: Form Java Swing (`src/main/*.java`).
-2. **Layer Data Access Object (DAO)**: Operasi database terisolasi dan aman dari SQL Injection (`src/main/dao/`).
-3. **Layer Domain Model**: Objek bisnis yang menerapkan 4 pilar OOP penuh (`src/main/model/`).
+Proyek ini merupakan hasil *refactoring* arsitektur berorientasi objek terhadap basis kode legacy. Melalui proses restrukturisasi, sistem ini menerapkan pemisahan tanggung jawab yang jelas melalui arsitektur tiga lapis (*Layered Architecture*), kebal dari celah *SQL Injection* menggunakan `PreparedStatement`, serta menjamin konsistensi multi-tabel melalui transaksi basis data atomik (ACID).
 
 ---
 
-## 🏛️ Penerapan 4 Pilar OOP
+## 🏗️ Arsitektur Tiga Lapis (Layered Architecture)
 
-| Pilar OOP | Lokasi Implementasi | Penjelasan / Manfaat |
-| :--- | :--- | :--- |
-| **Encapsulation** | Semua class di `main.model` (`Barang`, `Member`, `Supplier`, `Transaksi`, `DetailTransaksi`, `Pengguna`) | Atribut `private`, akses hanya via *getter/setter* yang dilengkapi validasi data (misal: stok/harga tidak boleh negatif). |
-| **Inheritance** | `Admin extends Pengguna`<br>`Kasir extends Pengguna` | Class turunan mewarisi atribut umum (`id`, `username`, `password`, `email`) dari superclass abstrak `Pengguna`. |
-| **Abstraction** | `InterfaceDao<T>` (Interface)<br>`Pengguna` (Abstract Class) | `InterfaceDao<T>` mendefinisikan kontrak CRUD (`simpan`, `ubah`, `hapus`, `ambilSemua`, `cariById`). `Pengguna` memiliki method abstrak `getHakAkses()`, `tampilkanMenu()`, dan `getDashboardTujuan()`. |
-| **Polymorphism** | - `PenggunaDao.login()`<br>- Overriding di `Admin` & `Kasir`<br>- Overloading di `BarangDao` | Method `login()` mengembalikan tipe referensi superclass `Pengguna`, namun objek konkretnya adalah `Admin` atau `Kasir`. Overloading method `cari(long)`, `cari(String)`, `cari(int, int)` pada `BarangDao`. |
-
----
-
-## ⚙️ Prasyarat Lingkungan (Environment)
-
-- **Sistem Operasi**: Windows 10/11
-- **Java Development Kit (JDK)**: OpenJDK 8 / 11 / 17 / 21+  
-  *(Path JDK terdeteksi di sistem ini: `C:\Users\NITRO\.jdks\openjdk-26.0.2.1`)*
-- **Database Server**: MySQL (via XAMPP / MariaDB) di `localhost:3306`
-  - User: `root`
-  - Password: `(kosong)`
-  - Nama Database: `kasir`
-- **Driver JDBC**: `mysql-connector-java.jar` (versi 5.1.49 atau 8.x) diletakkan di folder `lib/`.
+Sistem memisahkan tanggung jawab kode menjadi 3 lapisan terisolasi:
+1. **Presentation Layer (`src/main/`)**: Antarmuka grafis pengguna berbasis Java Swing JFrame (`MenuUtama`, `loginAdmin`, `loginKasir`, `dashbordAdmin`, `dashbordKasir`, `tambahBarang`, `listBarang`, `dataMember`, `dataSupplier`, `registrasi`, `riwayatTransaksi`).
+2. **Domain Model Layer (`src/main/model/`)**: Kelas entitas bisnis murni yang menerapkan 4 pilar OOP penuh:
+   - Encapsulation: `Barang`, `Member`, `Supplier`, `Transaksi`, `DetailTransaksi`, `Struk`.
+   - Inheritance: `Pengguna` ➡️ `Admin` dan `Kasir`.
+   - Abstraction: `InterfaceDao<T>` dan `abstract class Pengguna`.
+   - Polymorphism: Overriding hak akses dan overloading method bisnis.
+3. **Data Access Object Layer (`src/main/dao/`)**: Lapisan persistensi basis data yang menghubungkan aplikasi ke MySQL (`BarangDao`, `MemberDao`, `SupplierDao`, `PenggunaDao`, `TransaksiDao`) menggunakan `PreparedStatement` aman dan koneksi terpusat.
 
 ---
 
-## 🗄️ Skema Database & Akun Awal
+## ✨ Fitur-Fitur Utama Aplikasi
 
-### 1. Daftar Tabel Utama
-- `admin` : Menyimpan kredensial login akun Administrator toko.
-- `petugaskasir` : Menyimpan kredensial login akun Petugas Kasir.
-- `databarang` : Menyimpan kode barang (PK), nama barang, harga beli, harga jual, dan stok.
-- `member` : Menyimpan data pelanggan member toko beserta poin reward.
-- `supplier` : Menyimpan data pemasok barang.
-- `transaksi` : Menyimpan header penjualan (no_transaksi, petugas_kasir, total, waktu).
-- `detail_transaksi` : *(Skrip tambahan di `schema_tambahan.sql`)* Menyimpan rincian item tiap transaksi.
-
-### 2. Akun Bawaan untuk Pengujian
-Jika database Anda baru di-import, pastikan ada baris pengguna di tabel:
-- **Tabel `admin`**: Username `admin`, Password `admin` (atau sesuaikan data di phpMyAdmin).
-- **Tabel `petugaskasir`**: Username `kasir1`, Password `kasir1`.
-
----
-
-## 🚀 Panduan Menjalankan Lewat PowerShell
-
-Anda dapat mengompilasi dan menjalankan aplikasi secara langsung melalui terminal **PowerShell** tanpa harus membuka NetBeans.
-
-### Langkah 1: Pastikan Database MySQL XAMPP Aktif
-1. Buka **XAMPP Control Panel**.
-2. Klik tombol **Start** pada modul **MySQL** (dan **Apache** jika butuh phpMyAdmin).
-3. Pastikan port `3306` menyala hijau.
-
----
-
-### Langkah 2: Kompilasi Semua Kode Java (.java ➡️ .class)
-
-Buka PowerShell di direktori proyek (`c:\Users\NITRO\Downloads\POS-KasirJAVA-PBO`), lalu jalankan:
-
-```powershell
-# 1. Tentukan path compiler javac
-$javac = "C:\Users\NITRO\.jdks\openjdk-26.0.2.1\bin\javac.exe"
-
-# 2. Buat folder keluaran jika belum ada
-if (-not (Test-Path "build\classes")) { New-Item -ItemType Directory -Path "build\classes" -Force }
-
-# 3. Kumpulkan semua file .java (kecuali config.java yang usang)
-$files = Get-ChildItem -Path src -Recurse -Filter "*.java" | Where-Object { $_.Name -ne "config.java" } | Select-Object -ExpandProperty FullName
-
-# 4. Eksekusi kompilasi
-& $javac -cp "src;lib\*" -d build\classes $files
-```
-
-*(Jika berhasil tanpa pesan error merah, semua file class telah siap di folder `build\classes`)*.
-
----
-
-### Langkah 3: Menjalankan Aplikasi (Run Desktop GUI)
-
-Untuk menjalankan jendela utama aplikasi:
-
-```powershell
-# 1. Tentukan path runtime java
-$java = "C:\Users\NITRO\.jdks\openjdk-26.0.2.1\bin\java.exe"
-
-# 2. Jalankan aplikasi kasir (Menu Utama)
-& $java -cp "build\classes;lib\*" main.MenuUtama
-```
-
-Atau jika ingin dijalankan di jendela terpisah di latar belakang (background process):
-```powershell
-Start-Process "C:\Users\NITRO\.jdks\openjdk-26.0.2.1\bin\java.exe" -ArgumentList "-cp `"build\classes;lib\*`" main.MenuUtama"
-```
-
----
-
-## 🛠️ Penyelesaian Masalah (Troubleshooting)
-
-1. **Error: `No suitable driver found for jdbc:mysql://localhost:3306/kasir`**
-   - **Penyebab**: File library MySQL Connector JAR belum dimasukkan ke classpath.
-   - **Solusi**: 
-     - Buat folder `lib` di dalam proyek (`mkdir lib`).
-     - Unduh `mysql-connector-j-8.x.jar` atau `mysql-connector-java-5.1.49.jar` lalu masukkan ke folder `lib/`.
-     - Jalankan kembali perintah dengan `-cp "build\classes;lib\*"`.
-
-2. **Error: `Communications link failure / Connection refused`**
-   - **Penyebab**: MySQL di XAMPP belum menyala atau port 3306 diblokir firewall.
-   - **Solusi**: Buka XAMPP Control Panel, klik **Start** pada MySQL.
-
-3. **Aplikasi Terbuka tapi Tidak Bisa Login**
-   - **Penyebab**: Tabel `admin` atau `petugaskasir` di database `kasir` masih kosong.
-   - **Solusi**: Tambahkan data akun secara manual lewat phpMyAdmin (`http://localhost/phpmyadmin`).
-
-4. **Tabel `detail_transaksi` belum ada**
-   - **Solusi**: Buka phpMyAdmin, pilih database `kasir`, masuk ke tab **SQL**, salin dan jalankan skrip dari file [`schema_tambahan.sql`](file:///c:/Users/NITRO/Downloads/POS-KasirJAVA-PBO/schema_tambahan.sql).
+- **Autentikasi Berbasis Peran (RBAC)**: Form login terpisah untuk Administrator dan Petugas Kasir yang diverifikasi secara polimorfik melalui `PenggunaDao.login`.
+- **Manajemen Barang & Pemasok (CRUD)**: Pengelolaan master produk toko pada `tambahBarang` dengan pemilihan supplier pemasok (relasi One-to-Many).
+- **Katalog Realtime Kasir**: Form `listBarang` untuk memantau ketersediaan stok produk dan nama pemasok secara cepat.
+- **Transaksi Penjualan Atomik (ACID)**: Eksekusi transaksi penjualan multi-tabel pada `dashbordKasir` yang secara atomik menyimpan header nota, detail item, memotong stok barang, dan menambah poin member. Jika stok tidak mencukupi, seluruh proses dibatalkan otomatis (*rollback*).
+- **Program Loyalitas Member & Poin**: Pelanggan member memperoleh 1 poin reward per kelipatan belanja Rp 10.000 yang langsung dicatat pada struk dan basis data.
+- **Pencetakan Nota Belanja (Struk)**: Class `Struk` menghasilkan teks nota monospaced rapi, dialog pop-up interaktif, dan opsi ekspor ke berkas fisik `.txt`.
+- **Laporan Riwayat Penjualan**: Form `riwayatTransaksi` menyajikan histori transaksi, rincian barang per faktur, serta fitur cetak ulang nota belanja.
+- **Manajemen Supplier & Proteksi Data**: Form `dataSupplier` dilengkapi dialog konfirmasi jumlah barang terkait sebelum data supplier dihapus (foreign key bernilai `NULL` via `ON DELETE SET NULL`).
+- **Registrasi Pegawai Polimorfik**: Form `registrasi` untuk mendaftarkan akun kasir atau admin baru menggunakan method `PenggunaDao.simpan`.
 
 ---
 
@@ -135,44 +43,120 @@ Start-Process "C:\Users\NITRO\.jdks\openjdk-26.0.2.1\bin\java.exe" -ArgumentList
 
 ```text
 POS-KasirJAVA-PBO/
-├── .gitignore               # Daftar pengabaian file hasil build
+├── .gitignore               # Daftar pengabaian berkas kompilasi (build/, dist/)
 ├── build.xml                # Skrip Apache Ant bawaan NetBeans
 ├── schema_tambahan.sql      # Skrip DDL tabel detail_transaksi
-├── README.md                # Dokumentasi & panduan lengkap (file ini)
-├── lib/                     # Tempat meletakkan mysql-connector-java.jar
-├── build/classes/           # Hasil kompilasi bytecode (.class)
+├── schema_relasi.sql        # Skrip DDL kolom bayar, kembalian, id_supplier, dan id_member
+├── DOKUMENTASI_LAPORAN.md   # Laporan lengkap sistem (Pendahuluan, OOA, OOD, OOP, ERD)
+├── README.md                # Panduan teknis proyek (berkas ini)
+├── lib/                     # Direktori pustaka JDBC Driver MySQL
 └── src/
     └── main/
-        ├── MenuUtama.java           # Entry point aplikasi (Pilihan Login Admin/Kasir)
-        ├── loginAdmin.java          # Form autentikasi admin
-        ├── loginKasir.java          # Form autentikasi kasir
-        ├── dashbordAdmin.java       # Menu utama pengelolaan admin
-        ├── dashbordKasir.java       # Menu utama kasir & transaksi penjualan
-        ├── tambahBarang.java        # Form CRUD barang (Admin)
-        ├── listBarang.java          # Form penelusuran barang (Kasir)
-        ├── dataMember.java          # Form pengelolaan member & poin pelanggan
-        ├── dataSupplier.java        # Form pengelolaan pemasok barang
-        ├── registrasi.java          # Form pendaftaran akun kasir/admin baru
-        ├── riwayatTransaksi.java    # Form laporan & pencarian riwayat transaksi
-        ├── koneksi.java             # Helper koneksi database legacy
+        ├── MenuUtama.java           # Jendela pembuka utama aplikasi
+        ├── loginAdmin.java          # Form autentikasi administrator
+        ├── loginKasir.java          # Form autentikasi petugas kasir
+        ├── dashbordAdmin.java       # Menu dashboard administrator
+        ├── dashbordKasir.java       # Menu dashboard transaksi kasir
+        ├── tambahBarang.java        # Form CRUD barang & pemilihan supplier
+        ├── listBarang.java          # Form katalog barang untuk kasir
+        ├── dataMember.java          # Form CRUD member pelanggan & poin
+        ├── dataSupplier.java        # Form CRUD supplier pemasok barang
+        ├── registrasi.java          # Form pendaftaran akun karyawan baru
+        ├── riwayatTransaksi.java    # Form histori penjualan & cetak ulang struk
+        ├── koneksi.java             # Pengelola koneksi basis data terpusat (koneksi.buka())
         │
-        ├── model/                   # [TAMBAHAN OOP] Model POJO & Interface
-        │   ├── InterfaceDao.java    # Generic DAO interface
-        │   ├── Pengguna.java        # Abstract class superclass akun
-        │   ├── Admin.java           # Concrete class Admin
-        │   ├── Kasir.java           # Concrete class Kasir
-        │   ├── Barang.java          # Domain model barang
-        │   ├── Member.java          # Domain model member
-        │   ├── Supplier.java        # Domain model supplier
-        │   ├── Transaksi.java       # Header transaksi & komposisi detail
-        │   ├── DetailTransaksi.java # Item rincian per transaksi
-        │   └── Struk.java           # Logika cetak struk nota belanja
+        ├── model/                   # Layer Domain Model & Kontrak Abstraksi
+        │   ├── InterfaceDao.java    # Generic DAO interface (Abstraction)
+        │   ├── Pengguna.java        # Abstract class akun (Abstraction & Inheritance)
+        │   ├── Admin.java           # Subclass Administrator (Polymorphism Overriding)
+        │   ├── Kasir.java           # Subclass Petugas Kasir (Polymorphism Overriding)
+        │   ├── Supplier.java        # Model entitas supplier (Encapsulation)
+        │   ├── Barang.java          # Model entitas barang (Encapsulation & Asosiasi)
+        │   ├── Member.java          # Model entitas member loyalitas (Encapsulation)
+        │   ├── DetailTransaksi.java # Model baris rincian item transaksi (Encapsulation)
+        │   ├── Transaksi.java       # Model header transaksi (Komposisi & Asosiasi)
+        │   └── Struk.java           # Utilitas cetak & ekspor berkas nota belanja (.txt)
         │
-        └── dao/                     # [TAMBAHAN OOP] Data Access Object (PreparedStatement)
-            ├── BarangDao.java       # Akses data barang (Overloading cari)
-            ├── MemberDao.java       # Akses data member
-            ├── SupplierDao.java     # Akses data supplier
-            ├── PenggunaDao.java     # Akses login polimorfik & registrasi
-            └── TransaksiDao.java    # Transaksi atomik DB (Header + Detail + Stok)
+        └── dao/                     # Layer Data Access Object (PreparedStatement)
+            ├── BarangDao.java       # DAO barang (Overloading cari)
+            ├── MemberDao.java       # DAO member pelanggan
+            ├── SupplierDao.java     # DAO supplier pemasok
+            ├── PenggunaDao.java     # DAO login & registrasi polimorfik
+            └── TransaksiDao.java    # DAO transaksi atomik ACID multi-tabel
 ```
 
+---
+
+## ⚙️ Prasyarat Lingkungan (Environment)
+
+- **Sistem Operasi**: Windows 10 / 11, Linux, atau macOS.
+- **Java Development Kit (JDK)**: JDK 8 / 11 / 17 / 21+  
+  *(Path JDK yang digunakan saat pengembangan: `C:\Users\NITRO\.jdks\openjdk-26.0.2.1`)*
+- **Basis Data**: MySQL Server 5.7+ / 8.x atau MariaDB (via XAMPP) pada `localhost:3306`.
+  - User: `root`
+  - Password: `(kosong / default)`
+  - Nama Database: `kasir`
+- **Driver JDBC**: `mysql-connector-java.jar` (versi 5.1.49 atau versi 8.x) diletakkan di dalam folder `lib/`.
+
+---
+
+## 🚀 Langkah Menjalankan Aplikasi
+
+Ikuti tahapan instalasi basis data dan kompilasi berikut secara berurutan:
+
+### 1. Persiapan Basis Data MySQL
+1. Jalankan service **MySQL** melalui XAMPP Control Panel (pastikan port `3306` aktif).
+2. Buka antarmuka manajemen basis data (seperti phpMyAdmin pada browser `http://localhost/phpmyadmin` atau HeidiSQL / MySQL Workbench).
+3. Buat basis data baru bernama `kasir`:
+   ```sql
+   CREATE DATABASE IF NOT EXISTS `kasir`;
+   USE `kasir`;
+   ```
+4. Eksekusi skrip SQL dengan urutan berikut:
+   - **Skrip SQL Asli Bawaan**: Import tabel-tabel utama (`admin`, `petugaskasir`, `databarang`, `member`, `supplier`, `transaksi`).
+   - **Skrip [`schema_tambahan.sql`](file:///c:/Users/NITRO/Downloads/POS-KasirJAVA-PBO/schema_tambahan.sql)**: Mengeksekusi pembuatan tabel `detail_transaksi` untuk menyimpan rincian item belanja.
+   - **Skrip [`schema_relasi.sql`](file:///c:/Users/NITRO/Downloads/POS-KasirJAVA-PBO/schema_relasi.sql)**: Berisi blok DDL pembaruan skema relasi yang dieksekusi berurutan:
+     - Tahap 1: Menambahkan kolom `bayar` dan `kembalian` pada tabel `transaksi`.
+     - Tahap 2: Menambahkan kolom `id_supplier` (FK ke `supplier.id` ON DELETE SET NULL) pada tabel `databarang`.
+     - Tahap 3: Menambahkan kolom `id_member` (FK ke `member.id_member` ON DELETE SET NULL) pada tabel `transaksi`.  
+     *(Perhatian: Eksekusi skrip relasi ini per blok sesuai kebutuhan dan jangan diulang kembali bila kolom sudah terbentuk di basis data).*
+
+### 2. Membuka dan Menjalankan Proyek di Apache NetBeans
+1. Buka **Apache NetBeans IDE**.
+2. Pilih menu **File** ➡️ **Open Project**, lalu pilih folder proyek `POS-KasirJAVA-PBO`.
+3. Tambahkan driver MySQL JDBC ke proyek jika belum ada:
+   - Pada panel Project, klik kanan pada node **Libraries** ➡️ **Add JAR/Folder...**.
+   - Pilih file `mysql-connector-java-5.1.49.jar` atau `mysql-connector-j-8.x.jar` dari folder `lib/`.
+4. Klik kanan nama proyek pada panel Projects, lalu pilih **Clean and Build**.
+5. Untuk menjalankan sistem, klik kanan file `src/main/MenuUtama.java`, lalu pilih **Run File** (atau tekan `Shift + F6`).
+
+---
+
+## 👤 Akun Uji Coba
+
+Akun pengguna tidak disediakan secara baku di dalam skrip basis data:
+> **Buat akun melalui menu Registrasi** pada aplikasi dengan masuk melalui menu registrasi administrator untuk membuat akun Admin atau Kasir baru.
+
+---
+
+## 🏷️ Atribusi & Riwayat Pengembangan
+
+Proyek ini dikembangkan dari repositori sumber terbuka:
+- **Repositori Asal**: [https://github.com/rahmattulus/POS-KasirJAVA](https://github.com/rahmattulus/POS-KasirJAVA)
+- **Penulis Asli**: Rahmat Tulus
+
+### Daftar Bagian yang Ditambahkan (Refactoring Berorientasi Objek)
+Seluruh bagian kode baru dan hasil modifikasi pada proyek ini ditandai secara konsisten menggunakan komentar `// [TAMBAHAN]`:
+1. **Arsitektur Berlapis**: Pembentukan package domain `main.model` dan package persistensi `main.dao`.
+2. **Pemberantasan Celah SQL Injection**: Penggantian seluruh query penggabungan string langsung menggunakan `PreparedStatement` berparameter.
+3. **Pemusatan Koneksi Basis Data**: Penambahan method statis `koneksi.buka()` pada `main.koneksi` yang dipakai oleh seluruh kelas DAO.
+4. **Penerapan 4 Pilar OOP Penuh**:
+   - *Encapsulation*: Setter bervalidasi dan method domain bisnis pada `Barang`, `Member`, `Supplier`, `Transaksi`, dan `DetailTransaksi`.
+   - *Inheritance*: Pewarisan superclass abstrak `Pengguna` ke subclass `Admin` dan `Kasir`.
+   - *Abstraction*: Kontrak generic interface `InterfaceDao<T>` dan abstract class `Pengguna`.
+   - *Polymorphism*: Dynamic dispatch pada `PenggunaDao.login()` serta static overloading method pada `BarangDao.cari(...)` dan `Member.tambahPoin(...)`.
+5. **Transaksi Penjualan Atomik (ACID)**: Eksekusi transaksi multi-tabel (`transaksi`, `detail_transaksi`, pengurangan stok `databarang`, penambahan poin `member`) di dalam blok atomik `commit` dan `rollback`.
+6. **Class Utilitas Struk**: Format nota monospaced rapi, dialog pratinjau, dan ekspor berkas fisik `.txt`.
+7. **Form Riwayat Penjualan**: Form `riwayatTransaksi` dengan pemuatan data relasi, rincian barang per faktur, dan opsi cetak ulang nota.
+8. **Relasi Supplier ➡️ Barang (One-to-Many)**: Foreign key `id_supplier` (ON DELETE SET NULL), combo box supplier di form barang, dan konfirmasi proteksi sebelum menghapus supplier.
+9. **Relasi Member ➡️ Transaksi (One-to-Many) & Poin**: Foreign key `id_member` (ON DELETE SET NULL), kolom persisten `bayar` dan `kembalian`, combo box member di kasir, dan penambahan poin reward belanja otomatis.
