@@ -29,7 +29,12 @@ public class dashbordKasir extends javax.swing.JFrame {
 
     // [TAMBAHAN] Inisialisasi DAO untuk akses data transaksi dan barang tanpa koneksi manual
     private final main.dao.TransaksiDao transaksiDao = new main.dao.TransaksiDao();
-    private final main.dao.BarangDao barangDao = new main.dao.BarangDao();
+    private final main.dao.BarangDao    barangDao    = new main.dao.BarangDao();
+    // [TAMBAHAN] Inisialisasi DAO dan komponen pilihan Member
+    private final main.dao.MemberDao    memberDao    = new main.dao.MemberDao();
+    private javax.swing.JComboBox<String> cbMember;
+    private javax.swing.JLabel            lblMemberPoin;
+    private java.util.List<main.model.Member> listMember = new java.util.ArrayList<>();
 
     /**
      * Creates new form dashbordAdmin
@@ -52,6 +57,8 @@ public class dashbordKasir extends javax.swing.JFrame {
         });
         timer.start();  // Memulai timer
         txtJam.setText(jam());
+
+        initMemberComponents(); // [TAMBAHAN] Pasang komponen pilihan Member
     }
 
     public String noFaktur() {
@@ -87,6 +94,90 @@ public class dashbordKasir extends javax.swing.JFrame {
         totalAtas.setText("");
         txtBayar.setText("");
         txtKembali.setText("");
+        if (cbMember != null && cbMember.getItemCount() > 0) {
+            cbMember.setSelectedIndex(0);
+        }
+        if (lblMemberPoin != null) {
+            lblMemberPoin.setText("Status: Non-member");
+        }
+    }
+
+    /**
+     * [TAMBAHAN] Menginisialisasi komponen combo box pilihan Member
+     * dan memasangnya ke antarmuka tanpa memodifikasi blok initComponents.
+     */
+    private void initMemberComponents() {
+        javax.swing.JLabel lblPilihMember = new javax.swing.JLabel("Member :");
+        lblPilihMember.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+        lblPilihMember.setForeground(java.awt.Color.WHITE);
+        lblPilihMember.setBounds(380, 420, 70, 25);
+
+        cbMember = new javax.swing.JComboBox<>();
+        cbMember.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 12));
+        cbMember.setBackground(java.awt.Color.WHITE);
+        cbMember.setForeground(java.awt.Color.BLACK);
+        cbMember.setBounds(455, 420, 185, 25);
+
+        lblMemberPoin = new javax.swing.JLabel("Status: Non-member");
+        lblMemberPoin.setFont(new java.awt.Font("Segoe UI", java.awt.Font.ITALIC, 11));
+        lblMemberPoin.setForeground(java.awt.Color.WHITE);
+        lblMemberPoin.setBounds(455, 448, 185, 20);
+
+        cbMember.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                updateStatusMember();
+            }
+        });
+
+        jPanel1.add(lblPilihMember);
+        jPanel1.add(cbMember);
+        jPanel1.add(lblMemberPoin);
+
+        muatMemberCombo();
+    }
+
+    /**
+     * [TAMBAHAN] Memuat data member dari MemberDao ke dalam combo box.
+     */
+    private void muatMemberCombo() {
+        if (cbMember == null) return;
+        cbMember.removeAllItems();
+        cbMember.addItem("Non-member");
+        listMember.clear();
+        try {
+            listMember = memberDao.ambilSemua();
+            for (main.model.Member m : listMember) {
+                cbMember.addItem(m.getNamaMember() + " (ID: " + m.getIdMember() + ")");
+            }
+        } catch (SQLException e) {
+            System.out.println("Gagal memuat daftar member: " + e.getMessage());
+        }
+    }
+
+    /**
+     * [TAMBAHAN] Memperbarui tampilan label status poin member yang dipilih.
+     */
+    private void updateStatusMember() {
+        main.model.Member m = getSelectedMember();
+        if (m != null) {
+            lblMemberPoin.setText("Poin saat ini: " + m.getPoin() + " Poin");
+        } else {
+            lblMemberPoin.setText("Status: Non-member");
+        }
+    }
+
+    /**
+     * [TAMBAHAN] Mengambil objek Member yang sedang dipilih di combo box.
+     * @return objek Member atau null jika memilih "Non-member"
+     */
+    private main.model.Member getSelectedMember() {
+        if (cbMember == null) return null;
+        int index = cbMember.getSelectedIndex();
+        if (index > 0 && (index - 1) < listMember.size()) {
+            return listMember.get(index - 1);
+        }
+        return null;
     }
 
     /**
@@ -625,6 +716,12 @@ public class dashbordKasir extends javax.swing.JFrame {
         main.model.Transaksi transaksi = new main.model.Transaksi(noFaktur, petugas, waktu);
         transaksi.setJumlahBayar(bayar);
 
+        // [TAMBAHAN] Pasang objek Member yang dipilih (jika ada) ke Transaksi
+        main.model.Member memberTerpilih = getSelectedMember();
+        if (memberTerpilih != null) {
+            transaksi.setMember(memberTerpilih);
+        }
+
         // Ambil setiap baris item dari tabel transaksi
         for (int i = 0; i < rowCount; i++) {
             String namaBarang = tabel.getValueAt(i, 0).toString();
@@ -654,8 +751,9 @@ public class dashbordKasir extends javax.swing.JFrame {
             main.model.Struk struk = new main.model.Struk(transaksi);
             struk.tampilkanDialogStruk();
 
-            // Bersihkan form dan buat nomor faktur baru
+            // Bersihkan form, refresh poin member, dan buat nomor faktur baru
             clear();
+            muatMemberCombo(); // [TAMBAHAN] Refresh daftar member & poin terbaru
             tabel.setNumRows(0);
             txtNoTransaksi.setText(noFaktur());
             JOptionPane.showMessageDialog(this, "Transaksi berhasil diproses dan disimpan!");

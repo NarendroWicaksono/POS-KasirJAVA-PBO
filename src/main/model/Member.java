@@ -73,15 +73,25 @@ public class Member {
     // ── Method bisnis domain ──────────────────────────────────
 
     /**
-     * [TAMBAHAN] Menambahkan poin loyalitas berdasarkan total belanja.
-     * Aturan: setiap Rp 10.000 mendapatkan 1 poin.
+     * [TAMBAHAN] Menambahkan poin loyalitas berdasarkan total belanja (tipe int).
+     * Aturan: setiap Rp 10.000 mendapatkan 1 poin (pembulatan ke bawah).
      *
      * @param totalBelanja total belanja dalam rupiah
      */
     public void tambahPoin(int totalBelanja) {
+        tambahPoin((long) totalBelanja);
+    }
+
+    /**
+     * [TAMBAHAN] Menambahkan poin loyalitas berdasarkan total belanja (tipe long).
+     * Aturan: setiap Rp 10.000 mendapatkan 1 poin (pembulatan ke bawah).
+     *
+     * @param totalBelanja total belanja dalam rupiah
+     */
+    public void tambahPoin(long totalBelanja) {
         if (totalBelanja < 0)
             throw new IllegalArgumentException("Total belanja tidak boleh negatif.");
-        int poinBaru = totalBelanja / 10000;
+        int poinBaru = (int) (totalBelanja / 10000);
         this.poin += poinBaru;
     }
 

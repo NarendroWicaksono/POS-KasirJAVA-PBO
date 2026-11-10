@@ -47,6 +47,12 @@ public class Struk {
         sb.append("=========================================\n");
         sb.append(String.format("No. Faktur : %s\n", transaksi.getNoTransaksi()));
         sb.append(String.format("Kasir      : %s\n", transaksi.getPetugasKasir()));
+        // [TAMBAHAN] Menampilkan identitas member pelanggan jika terdaftar
+        if (transaksi.getMember() != null) {
+            sb.append(String.format("Member     : %s\n", transaksi.getMember().getNamaMember()));
+        } else {
+            sb.append("Member     : Non-member\n");
+        }
         sb.append(String.format("Waktu      : %s\n", transaksi.getWaktuTransaksi()));
         sb.append("-----------------------------------------\n");
         sb.append(String.format("%-18s %4s %8s %9s\n", "Item", "Qty", "Harga", "Total"));
@@ -76,6 +82,12 @@ public class Struk {
         } else {
             sb.append("Bayar         : -\n");
             sb.append("Kembalian     : -\n");
+        }
+        // [TAMBAHAN] Menampilkan perolehan poin loyalitas member
+        if (transaksi.getMember() != null) {
+            sb.append("-----------------------------------------\n");
+            sb.append(String.format("Poin Didapat  : +%d Poin\n", transaksi.getPoinDidapat()));
+            sb.append(String.format("Total Poin    : %d Poin\n", transaksi.getMember().getPoin()));
         }
         sb.append("=========================================\n");
         sb.append("     Terima Kasih Atas Kunjungan Anda    \n");

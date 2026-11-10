@@ -106,7 +106,7 @@ public class riwayatTransaksi extends JFrame {
         panelTabel.setBackground(Color.WHITE);
 
         // Model Tabel Transaksi
-        String[] kolomTransaksi = {"No. Faktur", "Petugas Kasir", "Total Belanja", "Bayar", "Kembalian", "Waktu Transaksi"};
+        String[] kolomTransaksi = {"No. Faktur", "Member", "Poin Didapat", "Petugas Kasir", "Total Belanja", "Bayar", "Kembalian", "Waktu Transaksi"};
         modelTransaksi = new DefaultTableModel(kolomTransaksi, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -179,7 +179,7 @@ public class riwayatTransaksi extends JFrame {
 
     /**
      * [TAMBAHAN] Memuat seluruh riwayat transaksi dari database menggunakan TransaksiDao.
-     * Menampilkan tanda "-" jika data transaksi lama belum memiliki nilai bayar/kembalian.
+     * Menampilkan informasi member, poin perolehan, serta tanda "-" jika data transaksi lama belum memiliki nilai bayar/kembalian.
      */
     public void muatDataTransaksi() {
         modelTransaksi.setRowCount(0);
@@ -188,8 +188,12 @@ public class riwayatTransaksi extends JFrame {
             for (Transaksi t : list) {
                 String strBayar = t.getJumlahBayar() > 0 ? String.format("Rp. %,d", t.getJumlahBayar()) : "-";
                 String strKembali = t.getJumlahBayar() > 0 ? String.format("Rp. %,d", t.getKembalian()) : "-";
+                String namaMember = (t.getMember() != null) ? t.getMember().getNamaMember() : "Non-member";
+                String strPoin = (t.getMember() != null) ? ("+" + t.getPoinDidapat()) : "-";
                 modelTransaksi.addRow(new Object[]{
                     t.getNoTransaksi(),
+                    namaMember,
+                    strPoin,
                     t.getPetugasKasir(),
                     String.format("Rp. %,d", t.getTotal()),
                     strBayar,
@@ -225,7 +229,7 @@ public class riwayatTransaksi extends JFrame {
 
     /**
      * [TAMBAHAN] Mencetak ulang struk dari baris riwayat yang sedang dipilih.
-     * Menggunakan data bayar dan kembalian asli dari database (bukan disamakan bayar = total).
+     * Menggunakan data bayar, kembalian, dan member asli dari database.
      */
     private void cetakUlangStrukTerpilih() {
         int row = tblTransaksi.getSelectedRow();
@@ -236,14 +240,13 @@ public class riwayatTransaksi extends JFrame {
 
         int modelRow = tblTransaksi.convertRowIndexToModel(row);
         String noFaktur = modelTransaksi.getValueAt(modelRow, 0).toString();
-        String kasir = modelTransaksi.getValueAt(modelRow, 1).toString();
-        String waktu = modelTransaksi.getValueAt(modelRow, 5).toString();
 
         try {
-            // [TAMBAHAN] Ambil transaksi lengkap dari database agar bayar dan kembalian sesuai data asli
+            // [TAMBAHAN] Ambil transaksi lengkap dari database agar bayar, kembalian, dan member sesuai data asli
             Transaksi t = transaksiDao.cariByNoTransaksi(noFaktur);
             if (t == null) {
-                t = new Transaksi(noFaktur, kasir, waktu);
+                JOptionPane.showMessageDialog(this, "Data transaksi " + noFaktur + " tidak ditemukan!");
+                return;
             }
 
             List<DetailTransaksi> details = transaksiDao.ambilDetail(noFaktur);

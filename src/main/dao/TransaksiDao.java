@@ -47,17 +47,22 @@ public class TransaksiDao implements InterfaceDao<Transaksi> {
         Connection con = null;
         try {
             con = bukaKoneksi();
-            con.setAutoCommit(false); // Memulai transaksi database
+            con.setAutoCommit(false); // Memulai transaksi database (ACID)
 
-            // 1. Simpan header transaksi (termasuk bayar dan kembalian)
-            String sqlHeader = "INSERT INTO transaksi (no_transaksi, petugas_kasir, total, bayar, kembalian, waktu_transaksi) VALUES (?, ?, ?, ?, ?, ?)";
+            // 1. Simpan header transaksi (termasuk id_member, bayar, dan kembalian)
+            String sqlHeader = "INSERT INTO transaksi (no_transaksi, id_member, petugas_kasir, total, bayar, kembalian, waktu_transaksi) VALUES (?, ?, ?, ?, ?, ?, ?)";
             try (PreparedStatement psHeader = con.prepareStatement(sqlHeader)) {
                 psHeader.setString(1, tr.getNoTransaksi());
-                psHeader.setString(2, tr.getPetugasKasir());
-                psHeader.setLong(3, tr.getTotal());
-                psHeader.setLong(4, tr.getJumlahBayar());
-                psHeader.setLong(5, tr.getKembalian());
-                psHeader.setString(6, tr.getWaktuTransaksi());
+                if (tr.getMember() != null && tr.getMember().getIdMember() > 0) {
+                    psHeader.setInt(2, tr.getMember().getIdMember());
+                } else {
+                    psHeader.setNull(2, java.sql.Types.INTEGER);
+                }
+                psHeader.setString(3, tr.getPetugasKasir());
+                psHeader.setLong(4, tr.getTotal());
+                psHeader.setLong(5, tr.getJumlahBayar());
+                psHeader.setLong(6, tr.getKembalian());
+                psHeader.setString(7, tr.getWaktuTransaksi());
                 psHeader.executeUpdate();
             }
 
@@ -73,22 +78,40 @@ public class TransaksiDao implements InterfaceDao<Transaksi> {
                     psDetail.setInt(6, d.getJumlah());
                     psDetail.executeUpdate();
 
-                    // 3. Kurangi stok barang secara aman
+                    // 3. Kurangi stok barang secara aman (melempar SQLException jika stok kurang)
                     barangDao.kurangiStok(con, d.getKodeBarang(), d.getQty());
                 }
             }
 
-            // 4. Komit seluruh perubahan
+            // 4. [TAMBAHAN] Update poin member dalam transaksi yang SAMA jika pembeli adalah member
+            if (tr.getMember() != null && tr.getMember().getIdMember() > 0) {
+                int poinDidapat = tr.getPoinDidapat();
+                if (poinDidapat > 0) {
+                    String sqlPoin = "UPDATE member SET poin = poin + ? WHERE id_member = ?";
+                    try (PreparedStatement psPoin = con.prepareStatement(sqlPoin)) {
+                        psPoin.setInt(1, poinDidapat);
+                        psPoin.setInt(2, tr.getMember().getIdMember());
+                        psPoin.executeUpdate();
+                    }
+                }
+            }
+
+            // 5. Komit seluruh perubahan transaksi secara atomik
             con.commit();
+
+            // 6. Sinkronkan nilai poin pada objek Member di memori setelah commit sukses
+            if (tr.getMember() != null && tr.getMember().getIdMember() > 0) {
+                tr.getMember().tambahPoin(tr.getTotal());
+            }
         } catch (SQLException e) {
             if (con != null) {
                 try {
-                    con.rollback(); // Batalkan semua perubahan jika terjadi error
+                    con.rollback(); // Batalkan semua perubahan jika terjadi error (stok habis, kendala DB, dll.)
                 } catch (SQLException ex) {
                     ex.printStackTrace();
                 }
             }
-            throw e; // Lemparkan error agar ditangani oleh pemanggil
+            throw e; // Lemparkan error agar ditangani oleh UI
         } finally {
             if (con != null) {
                 try {
@@ -153,6 +176,7 @@ public class TransaksiDao implements InterfaceDao<Transaksi> {
 
     /**
      * [TAMBAHAN] Mengambil seluruh riwayat penjualan untuk ditampilkan di laporan.
+     * Menggunakan LEFT JOIN ke tabel member agar data pelanggan member dan non-member dapat dimuat.
      * Diurutkan dari transaksi terbaru.
      *
      * @return List transaksi
@@ -160,7 +184,10 @@ public class TransaksiDao implements InterfaceDao<Transaksi> {
      */
     public List<Transaksi> ambilRiwayatPenjualan() throws SQLException {
         List<Transaksi> list = new ArrayList<>();
-        String sql = "SELECT * FROM transaksi ORDER BY waktu_transaksi DESC";
+        String sql = "SELECT t.*, m.username AS member_nama, m.no_tlp AS member_tlp, m.poin AS member_poin "
+                   + "FROM transaksi t "
+                   + "LEFT JOIN member m ON t.id_member = m.id_member "
+                   + "ORDER BY t.waktu_transaksi DESC";
         try (Connection con = bukaKoneksi();
              PreparedStatement ps = con.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -175,6 +202,19 @@ public class TransaksiDao implements InterfaceDao<Transaksi> {
                 long kembalian = ambilLongAman(rs, "kembalian");
                 t.setJumlahBayar(bayar);
                 t.setKembalian(kembalian);
+
+                // [TAMBAHAN] Baca relasi Member jika ada
+                int idMember = 0;
+                try {
+                    idMember = rs.getInt("id_member");
+                } catch (SQLException ignored) {}
+                if (idMember > 0) {
+                    String namaMember = rs.getString("member_nama");
+                    String noTlp = rs.getString("member_tlp");
+                    int poin = rs.getInt("member_poin");
+                    t.setMember(new main.model.Member(idMember, namaMember != null ? namaMember : "-", noTlp, poin));
+                }
+
                 list.add(t);
             }
         }
@@ -182,14 +222,17 @@ public class TransaksiDao implements InterfaceDao<Transaksi> {
     }
 
     /**
-     * [TAMBAHAN] Mencari transaksi berdasarkan nomor faktur lengkap.
+     * [TAMBAHAN] Mencari transaksi berdasarkan nomor faktur lengkap beserta data member terkait.
      *
      * @param noTransaksi nomor faktur transaksi
      * @return objek Transaksi lengkap jika ditemukan, null jika tidak
      * @throws SQLException jika ada kendala database
      */
     public Transaksi cariByNoTransaksi(String noTransaksi) throws SQLException {
-        String sql = "SELECT * FROM transaksi WHERE no_transaksi = ? LIMIT 1";
+        String sql = "SELECT t.*, m.username AS member_nama, m.no_tlp AS member_tlp, m.poin AS member_poin "
+                   + "FROM transaksi t "
+                   + "LEFT JOIN member m ON t.id_member = m.id_member "
+                   + "WHERE t.no_transaksi = ? LIMIT 1";
         try (Connection con = bukaKoneksi();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, noTransaksi);
@@ -205,6 +248,19 @@ public class TransaksiDao implements InterfaceDao<Transaksi> {
                     long kembalian = ambilLongAman(rs, "kembalian");
                     t.setJumlahBayar(bayar);
                     t.setKembalian(kembalian);
+
+                    // [TAMBAHAN] Baca relasi Member jika ada
+                    int idMember = 0;
+                    try {
+                        idMember = rs.getInt("id_member");
+                    } catch (SQLException ignored) {}
+                    if (idMember > 0) {
+                        String namaMember = rs.getString("member_nama");
+                        String noTlp = rs.getString("member_tlp");
+                        int poin = rs.getInt("member_poin");
+                        t.setMember(new main.model.Member(idMember, namaMember != null ? namaMember : "-", noTlp, poin));
+                    }
+
                     return t;
                 }
             }

@@ -32,6 +32,9 @@ public class Transaksi {
     // [TAMBAHAN] Komposisi: satu Transaksi memiliki banyak DetailTransaksi
     private List<DetailTransaksi> listDetail;
 
+    // [TAMBAHAN] Asosiasi: Transaksi dapat terhubung ke Member (nullable, untuk pelanggan terdaftar)
+    private Member member;
+
     // ── Constructor ───────────────────────────────────────────
     // [TAMBAHAN]
     public Transaksi() {
@@ -63,6 +66,23 @@ public class Transaksi {
     public long   getKembalian()      { return kembalian; }
     public int    getDiskon()         { return diskon; }
     public List<DetailTransaksi> getListDetail() { return listDetail; }
+    // [TAMBAHAN] Getter & Setter untuk relasi Member
+    public Member getMember()         { return member; }
+    public void   setMember(Member member) { this.member = member; }
+
+    /**
+     * [TAMBAHAN] Menghitung perolehan poin dari transaksi ini.
+     * Aturan bisnis: 1 poin per kelipatan Rp 10.000 dari total belanja (pembulatan ke bawah).
+     * Jika non-member, poin yang didapat adalah 0.
+     *
+     * @return jumlah poin yang didapat
+     */
+    public int getPoinDidapat() {
+        if (member != null && total > 0) {
+            return (int) (total / 10000);
+        }
+        return 0;
+    }
 
     // ── Setter ────────────────────────────────────────────────
     // [TAMBAHAN]

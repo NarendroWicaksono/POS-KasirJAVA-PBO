@@ -32,3 +32,18 @@ ALTER TABLE `databarang`
     ON DELETE SET NULL
     ON UPDATE CASCADE;
 
+-- ------------------------------------------------------------
+-- TAHAP 3: RELASI MEMBER -> TRANSAKSI (ONE-TO-MANY) DAN POIN REWARD
+-- Menambahkan kolom id_member pada tabel transaksi sebagai foreign key
+-- ke member(id_member) dengan aksi ON DELETE SET NULL.
+-- Pelanggan non-member akan bernilai NULL pada kolom id_member.
+-- ------------------------------------------------------------
+
+ALTER TABLE `transaksi`
+  ADD COLUMN `id_member` INT NULL AFTER `no_transaksi`,
+  ADD CONSTRAINT `fk_transaksi_member`
+    FOREIGN KEY (`id_member`) REFERENCES `member`(`id_member`)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE;
+
+
