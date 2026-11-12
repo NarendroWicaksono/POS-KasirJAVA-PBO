@@ -55,6 +55,7 @@ flowchart LR
         UC3["Kelola Data Member"]
         UC4["Kelola Data Supplier"]
         UC5["Registrasi Karyawan"]
+        UC5b["Kelola Daftar Akun Pengguna"]
         UC6["Lihat Riwayat & Cetak Ulang Struk"]
         UC7["Katalog List Barang"]
         UC8["Transaksi Penjualan & Poin Member"]
@@ -82,6 +83,7 @@ flowchart LR
 | **UC3** | Kelola Data Member | Admin | Operasi CRUD data member pelanggan pada `dataMember`, mencatat nomor telepon dan memantau akumulasi poin reward. |
 | **UC4** | Kelola Data Supplier | Admin | Operasi CRUD data vendor pemasok pada `dataSupplier` dengan validasi konfirmasi dependensi sebelum penghapusan. |
 | **UC5** | Registrasi Karyawan | Admin | Mendaftarkan akun admin atau kasir baru pada form `registrasi` menggunakan method polimorfik `PenggunaDao.simpan`. |
+| **UC5b** | Kelola Daftar Akun Pengguna | Admin | Menampilkan daftar seluruh akun admin dan kasir tanpa password pada form `dataPengguna`, dengan proteksi cegah hapus akun sendiri. |
 | **UC6** | Lihat Riwayat & Cetak Ulang Struk | Admin | Meninjau rekaman penjualan pada `riwayatTransaksi`, melihat rincian item barang per nota, serta mencetak ulang struk fisik. |
 | **UC7** | Katalog List Barang | Kasir | Menelusuri katalog barang pada form `listBarang` secara realtime berdasarkan nama barang beserta nama supplier pemasoknya. |
 | **UC8** | Transaksi Penjualan & Poin Member | Kasir | Memproses item belanjaan pada `dashbordKasir`, memilih pelanggan member, kalkulasi otomatis subtotal dan kembalian, serta penambahan poin member. |
@@ -602,6 +604,7 @@ Aplikasi diorganisasikan ke dalam tiga package utama:
 - **`listBarang`**: Katalog penelusuran barang secara realtime untuk kasir dengan tampilan nama supplier.
 - **`dataMember`**: Form manajemen data pelanggan member (CRUD) dan pemantauan perolehan poin.
 - **`dataSupplier`**: Form manajemen data vendor pemasok (CRUD) dengan proteksi dependensi barang.
+- **`dataPengguna`**: Form tampilan tabel seluruh akun pengguna (Admin dan Kasir) tanpa mengekspos password, dilengkapi validasi pencegahan admin menghapus akunnya sendiri yang sedang aktif digunakan.
 - **`registrasi`**: Form pendaftaran akun kasir atau admin baru secara polimorfik.
 - **`riwayatTransaksi`**: Form pemantauan riwayat penjualan, rincian item, dan cetak ulang struk.
 - **`koneksi`**: Pengelola koneksi basis data terpusat melalui method statis `koneksi.buka()`.

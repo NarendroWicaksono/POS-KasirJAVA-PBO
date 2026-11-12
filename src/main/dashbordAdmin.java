@@ -278,18 +278,16 @@ public class dashbordAdmin extends javax.swing.JFrame {
             }
         });
 
-        // Panel penampung tombol baru di bawah baris tombol Member dan Riwayat
-        javax.swing.JPanel panelBawah = new javax.swing.JPanel();
-        panelBawah.setOpaque(false);
-        panelBawah.setLayout(new java.awt.GridLayout(1, 2, 26, 0));
-        panelBawah.add(btnSupplier);
-        panelBawah.add(btnDaftarAkun);
+        // Tambahkan tombol langsung ke jPanel1 dan posisikan sejajar persis dengan kolom kiri dan kanan
+        jPanel1.add(btnSupplier);
+        jPanel1.add(btnDaftarAkun);
 
-        // Tambahkan ke panel utama dengan posisi di bawah Member & Riwayat
-        jPanel1.add(panelBawah);
-        panelBawah.setBounds(255, 265, 255, 53);
+        // Kolom kiri (sejajar Registrasi & Member): x=294, y=269, width=102, height=53
+        btnSupplier.setBounds(294, 269, 102, 53);
+        // Kolom kanan (sejajar Data Barang & Riwayat): x=499, y=269, width=102, height=53
+        btnDaftarAkun.setBounds(499, 269, 102, 53);
+
         jPanel1.revalidate();
         jPanel1.repaint();
     }
 }
-

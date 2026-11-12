@@ -15,7 +15,7 @@ Proyek ini merupakan hasil *refactoring* arsitektur berorientasi objek terhadap 
 ## 🏗️ Arsitektur Tiga Lapis (Layered Architecture)
 
 Sistem memisahkan tanggung jawab kode menjadi 3 lapisan terisolasi:
-1. **Presentation Layer (`src/main/`)**: Antarmuka grafis pengguna berbasis Java Swing JFrame (`MenuUtama`, `loginAdmin`, `loginKasir`, `dashbordAdmin`, `dashbordKasir`, `tambahBarang`, `listBarang`, `dataMember`, `dataSupplier`, `registrasi`, `riwayatTransaksi`).
+1. **Presentation Layer (`src/main/`)**: Antarmuka grafis pengguna berbasis Java Swing JFrame (`MenuUtama`, `loginAdmin`, `loginKasir`, `dashbordAdmin`, `dashbordKasir`, `tambahBarang`, `listBarang`, `dataMember`, `dataSupplier`, `dataPengguna`, `registrasi`, `riwayatTransaksi`).
 2. **Domain Model Layer (`src/main/model/`)**: Kelas entitas bisnis murni yang menerapkan 4 pilar OOP penuh:
    - Encapsulation: `Barang`, `Member`, `Supplier`, `Transaksi`, `DetailTransaksi`, `Struk`.
    - Inheritance: `Pengguna` ➡️ `Admin` dan `Kasir`.
@@ -36,6 +36,7 @@ Sistem memisahkan tanggung jawab kode menjadi 3 lapisan terisolasi:
 - **Laporan Riwayat Penjualan**: Form `riwayatTransaksi` menyajikan histori transaksi, rincian barang per faktur, serta fitur cetak ulang nota belanja.
 - **Manajemen Supplier & Proteksi Data**: Form `dataSupplier` dilengkapi dialog konfirmasi jumlah barang terkait sebelum data supplier dihapus (foreign key bernilai `NULL` via `ON DELETE SET NULL`).
 - **Registrasi Pegawai Polimorfik**: Form `registrasi` untuk mendaftarkan akun kasir atau admin baru menggunakan method `PenggunaDao.simpan`.
+- **Manajemen Akun Pengguna**: Form `dataPengguna` menampilkan daftar akun admin dan kasir tanpa menampilkan password demi keamanan, dilengkapi fitur hapus akun dengan proteksi pencegahan penghapusan akun yang sedang aktif login.
 
 ---
 
@@ -61,6 +62,7 @@ POS-KasirJAVA-PBO/
         ├── listBarang.java          # Form katalog barang untuk kasir
         ├── dataMember.java          # Form CRUD member pelanggan & poin
         ├── dataSupplier.java        # Form CRUD supplier pemasok barang
+        ├── dataPengguna.java        # Form daftar akun admin/kasir & proteksi hapus
         ├── registrasi.java          # Form pendaftaran akun karyawan baru
         ├── riwayatTransaksi.java    # Form histori penjualan & cetak ulang struk
         ├── koneksi.java             # Pengelola koneksi basis data terpusat (koneksi.buka())
@@ -133,7 +135,7 @@ Sesuai dengan data akun bawaan yang tercantum di dalam `database_kasir.sql`, aku
 
 | Peran Akun | Form Login | Username | Password | Hak Akses & Keterangan |
 | :--- | :--- | :--- | :--- | :--- |
-| **Administrator** | Login Admin | `admin` | `admin123` | Akses penuh dashboard admin: kelola barang, supplier, member, registrasi karyawan, dan riwayat transaksi. |
+| **Administrator** | Login Admin | `admin` | `admin123` | Akses penuh dashboard admin: kelola barang, supplier, member, registrasi karyawan, daftar akun pengguna, dan riwayat transaksi. |
 | **Petugas Kasir** | Login Kasir | `kasir1` | `kasir123` | Akses kasir: transaksi penjualan, pemilihan member, kalkulasi poin reward, dan cetak struk nota belanja. |
 
 ---
