@@ -40,7 +40,7 @@ public class riwayatTransaksi extends JFrame {
 
     public riwayatTransaksi() {
         initComponentsCustom();
-        setTitle("RIWAYAT PENJUALAN | Dog-Mart");
+        setTitle("RIWAYAT PENJUALAN | Toko Jaya Abadi");
         setSize(800, 560);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);

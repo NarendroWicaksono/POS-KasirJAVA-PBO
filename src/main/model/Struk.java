@@ -25,7 +25,7 @@ public class Struk {
     public String buatTeksStruk() {
         StringBuilder sb = new StringBuilder();
         sb.append("=========================================\n");
-        sb.append("               DOG-MART POS              \n");
+        sb.append("          TOKO JAYA ABADI POS            \n");
         sb.append("       Jl. Raya Kampus No. 12, PBO       \n");
         sb.append("=========================================\n");
         sb.append(String.format("No. Faktur : %s\n", transaksi.getNoTransaksi()));

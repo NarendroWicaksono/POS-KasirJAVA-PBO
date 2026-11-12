@@ -5,7 +5,9 @@ public class MenuUtama extends javax.swing.JFrame {
 
     public MenuUtama() {
         initComponents();
-        setTitle("Dashboard Dog-mart");
+        setTitle("Dashboard Toko Jaya Abadi");
+        // [TAMBAHAN] Ubah nama toko menjadi Toko Jaya Abadi lewat konstruktor
+        jLabel3.setText("TOKO JAYA ABADI");
 
         setLocationRelativeTo(null);
     }
