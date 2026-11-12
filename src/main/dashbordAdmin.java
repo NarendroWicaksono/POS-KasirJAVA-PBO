@@ -13,6 +13,8 @@ public class dashbordAdmin extends javax.swing.JFrame {
 
         setLocationRelativeTo(null);
         name.setText(koneksi.username);
+        // [TAMBAHAN] Inisialisasi tombol Supplier dan Daftar Akun
+        inisialisasiTombolTambahan();
     }
 
     @SuppressWarnings("unchecked")
@@ -243,5 +245,51 @@ public class dashbordAdmin extends javax.swing.JFrame {
     private javax.swing.JButton regis;
     private javax.swing.JButton riwayat;
     // End of variables declaration//GEN-END:variables
+
+    // [TAMBAHAN] Field tombol baru
+    private javax.swing.JButton btnSupplier;
+    private javax.swing.JButton btnDaftarAkun;
+
+    // [TAMBAHAN] Method bantu untuk menambahkan tombol Supplier dan Daftar Akun ke tampilan dashboard admin
+    private void inisialisasiTombolTambahan() {
+        btnSupplier = new javax.swing.JButton();
+        btnSupplier.setBackground(new java.awt.Color(255, 255, 255));
+        btnSupplier.setFont(new java.awt.Font("SansSerif", 1, 12));
+        btnSupplier.setForeground(new java.awt.Color(0, 153, 255));
+        btnSupplier.setText("Supplier");
+        btnSupplier.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                // [TAMBAHAN] Membuka form dataSupplier dengan pola yang sama seperti dataMember (dispose lalu buka)
+                dispose();
+                dataSupplier.main(null);
+            }
+        });
+
+        btnDaftarAkun = new javax.swing.JButton();
+        btnDaftarAkun.setBackground(new java.awt.Color(255, 255, 255));
+        btnDaftarAkun.setFont(new java.awt.Font("SansSerif", 1, 12));
+        btnDaftarAkun.setForeground(new java.awt.Color(0, 153, 255));
+        btnDaftarAkun.setText("Daftar Akun");
+        btnDaftarAkun.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                // [TAMBAHAN] Membuka form dataPengguna dan menutup dashboard admin
+                dispose();
+                dataPengguna.main(null);
+            }
+        });
+
+        // Panel penampung tombol baru di bawah baris tombol Member dan Riwayat
+        javax.swing.JPanel panelBawah = new javax.swing.JPanel();
+        panelBawah.setOpaque(false);
+        panelBawah.setLayout(new java.awt.GridLayout(1, 2, 26, 0));
+        panelBawah.add(btnSupplier);
+        panelBawah.add(btnDaftarAkun);
+
+        // Tambahkan ke panel utama dengan posisi di bawah Member & Riwayat
+        jPanel1.add(panelBawah);
+        panelBawah.setBounds(255, 265, 255, 53);
+        jPanel1.revalidate();
+        jPanel1.repaint();
+    }
 }
 
