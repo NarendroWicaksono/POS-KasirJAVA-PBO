@@ -1,6 +1,4 @@
-// [TAMBAHAN] - Struk.java
-// Class utilitas domain untuk memformat dan mencetak struk transaksi kasir.
-// Mendukung tampilan pratinjau teks dan ekspor ke file fisik (.txt).
+
 package main.model;
 
 import java.awt.Font;
@@ -14,31 +12,16 @@ import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-/**
- * Class model utilitas untuk mencetak struk transaksi kasir.
- * Menerapkan prinsip Single Responsibility: menangani representasi teks
- * dan output berkas struk pembayaran.
- *
- * @author Tambahan OOP
- */
 public class Struk {
 
     private final Transaksi transaksi;
     private final NumberFormat formatRupiah;
 
-    /**
-     * [TAMBAHAN] Constructor menerima objek Transaksi.
-     * @param transaksi objek transaksi yang akan dicetak struknya
-     */
     public Struk(Transaksi transaksi) {
         this.transaksi = transaksi;
         this.formatRupiah = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
     }
 
-    /**
-     * [TAMBAHAN] Menyusun format teks struk belanja.
-     * @return String format struk rapi
-     */
     public String buatTeksStruk() {
         StringBuilder sb = new StringBuilder();
         sb.append("=========================================\n");
@@ -47,7 +30,7 @@ public class Struk {
         sb.append("=========================================\n");
         sb.append(String.format("No. Faktur : %s\n", transaksi.getNoTransaksi()));
         sb.append(String.format("Kasir      : %s\n", transaksi.getPetugasKasir()));
-        // [TAMBAHAN] Menampilkan identitas member pelanggan jika terdaftar
+
         if (transaksi.getMember() != null) {
             sb.append(String.format("Member     : %s\n", transaksi.getMember().getNamaMember()));
         } else {
@@ -75,7 +58,7 @@ public class Struk {
         if (transaksi.getDiskon() > 0) {
             sb.append(String.format("Diskon (%d%%)  : Ya\n", transaksi.getDiskon()));
         }
-        // [TAMBAHAN] Menampilkan tanda "-" jika data transaksi lama belum memiliki nilai bayar/kembalian
+
         if (transaksi.getJumlahBayar() > 0) {
             sb.append(String.format("Bayar         : Rp. %,d\n", transaksi.getJumlahBayar()));
             sb.append(String.format("Kembalian     : Rp. %,d\n", transaksi.getKembalian()));
@@ -83,7 +66,7 @@ public class Struk {
             sb.append("Bayar         : -\n");
             sb.append("Kembalian     : -\n");
         }
-        // [TAMBAHAN] Menampilkan perolehan poin loyalitas member
+
         if (transaksi.getMember() != null) {
             sb.append("-----------------------------------------\n");
             sb.append(String.format("Poin Didapat  : +%d Poin\n", transaksi.getPoinDidapat()));
@@ -98,9 +81,6 @@ public class Struk {
         return sb.toString();
     }
 
-    /**
-     * [TAMBAHAN] Menampilkan dialog struk belanja interaktif dengan opsi simpan ke file teks.
-     */
     public void tampilkanDialogStruk() {
         String teksStruk = buatTeksStruk();
 
@@ -128,10 +108,6 @@ public class Struk {
         }
     }
 
-    /**
-     * [TAMBAHAN] Menyimpan teks struk ke berkas fisik (.txt).
-     * @param isiStruk konten teks struk
-     */
     public void simpanKeFile(String isiStruk) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setSelectedFile(new File("Struk_" + transaksi.getNoTransaksi() + ".txt"));

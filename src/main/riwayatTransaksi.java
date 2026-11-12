@@ -1,6 +1,4 @@
-// [TAMBAHAN] - riwayatTransaksi.java
-// Form tampilan riwayat transaksi penjualan untuk Dashboard Admin.
-// Menampilkan header riwayat, rincian detail barang, dan opsi cetak ulang struk.
+
 package main;
 
 import java.awt.BorderLayout;
@@ -29,18 +27,10 @@ import main.model.DetailTransaksi;
 import main.model.Struk;
 import main.model.Transaksi;
 
-/**
- * JFrame untuk menampilkan riwayat penjualan toko.
- * Mengimplementasikan pemisahan OOD: mengambil data melalui TransaksiDao
- * dan menyajikan struk cetak ulang melalui class model Struk.
- *
- * @author Tambahan OOP
- */
 public class riwayatTransaksi extends JFrame {
 
     private final TransaksiDao transaksiDao = new TransaksiDao();
 
-    // Komponen UI
     private JTable tblTransaksi;
     private JTable tblDetail;
     private DefaultTableModel modelTransaksi;
@@ -61,7 +51,6 @@ public class riwayatTransaksi extends JFrame {
         JPanel panelUtama = new JPanel(new BorderLayout(10, 10));
         panelUtama.setBackground(new Color(0, 153, 255));
 
-        // ── Header Panel ──
         JPanel panelHeader = new JPanel(new BorderLayout());
         panelHeader.setBackground(new Color(0, 153, 255));
 
@@ -101,11 +90,9 @@ public class riwayatTransaksi extends JFrame {
         panelHeader.add(lblJudul, BorderLayout.CENTER);
         panelHeader.add(panelCari, BorderLayout.SOUTH);
 
-        // ── Center Panel (2 Tabel: Transaksi & Rincian Item) ──
         JPanel panelTabel = new JPanel(new BorderLayout(0, 10));
         panelTabel.setBackground(Color.WHITE);
 
-        // Model Tabel Transaksi
         String[] kolomTransaksi = {"No. Faktur", "Member", "Poin Didapat", "Petugas Kasir", "Total Belanja", "Bayar", "Kembalian", "Waktu Transaksi"};
         modelTransaksi = new DefaultTableModel(kolomTransaksi, 0) {
             @Override
@@ -131,7 +118,6 @@ public class riwayatTransaksi extends JFrame {
         JScrollPane scrollTransaksi = new JScrollPane(tblTransaksi);
         scrollTransaksi.setPreferredSize(new Dimension(760, 200));
 
-        // Model Tabel Detail
         String[] kolomDetail = {"Kode Barang", "Nama Barang", "Harga Satuan", "Qty", "Subtotal"};
         modelDetail = new DefaultTableModel(kolomDetail, 0) {
             @Override
@@ -153,7 +139,6 @@ public class riwayatTransaksi extends JFrame {
         panelTabel.add(scrollTransaksi, BorderLayout.NORTH);
         panelTabel.add(panelBawah, BorderLayout.CENTER);
 
-        // ── Tombol Bawah (Cetak Ulang Struk) ──
         JPanel panelFooter = new JPanel();
         panelFooter.setBackground(new Color(0, 153, 255));
 
@@ -177,10 +162,6 @@ public class riwayatTransaksi extends JFrame {
         add(panelUtama);
     }
 
-    /**
-     * [TAMBAHAN] Memuat seluruh riwayat transaksi dari database menggunakan TransaksiDao.
-     * Menampilkan informasi member, poin perolehan, serta tanda "-" jika data transaksi lama belum memiliki nilai bayar/kembalian.
-     */
     public void muatDataTransaksi() {
         modelTransaksi.setRowCount(0);
         try {
@@ -206,9 +187,6 @@ public class riwayatTransaksi extends JFrame {
         }
     }
 
-    /**
-     * [TAMBAHAN] Memuat rincian item untuk nomor faktur yang dipilih.
-     */
     private void muatDetailTransaksi(String noFaktur) {
         modelDetail.setRowCount(0);
         try {
@@ -227,10 +205,6 @@ public class riwayatTransaksi extends JFrame {
         }
     }
 
-    /**
-     * [TAMBAHAN] Mencetak ulang struk dari baris riwayat yang sedang dipilih.
-     * Menggunakan data bayar, kembalian, dan member asli dari database.
-     */
     private void cetakUlangStrukTerpilih() {
         int row = tblTransaksi.getSelectedRow();
         if (row == -1) {
@@ -242,7 +216,7 @@ public class riwayatTransaksi extends JFrame {
         String noFaktur = modelTransaksi.getValueAt(modelRow, 0).toString();
 
         try {
-            // [TAMBAHAN] Ambil transaksi lengkap dari database agar bayar, kembalian, dan member sesuai data asli
+
             Transaksi t = transaksiDao.cariByNoTransaksi(noFaktur);
             if (t == null) {
                 JOptionPane.showMessageDialog(this, "Data transaksi " + noFaktur + " tidak ditemukan!");

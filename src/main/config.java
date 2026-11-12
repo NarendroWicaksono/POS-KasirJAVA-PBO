@@ -1,14 +1,11 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+
 package main;
 
 import java.sql.*;
 
 public class config {
     private static Connection mysqlconfig;
-    
+
     public static Connection configDB() throws SQLException{
         try{
             String url = "jdbc:mysql://http://localhost/phpmyadmin/kasir/useSSL=false";
@@ -21,3 +18,4 @@ public class config {
         return mysqlconfig;
     }
 }
+

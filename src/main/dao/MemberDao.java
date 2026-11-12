@@ -1,6 +1,4 @@
-// [TAMBAHAN] - MemberDao.java
-// Data Access Object untuk entitas Member.
-// Menerapkan InterfaceDao<Member> dengan PreparedStatement aman dari SQL Injection.
+
 package main.dao;
 
 import java.sql.Connection;
@@ -13,15 +11,8 @@ import java.util.List;
 import main.model.InterfaceDao;
 import main.model.Member;
 
-/**
- * Class DAO untuk mengelola tabel 'member'.
- * Mengimplementasikan InterfaceDao<Member>.
- *
- * @author Tambahan OOP
- */
 public class MemberDao implements InterfaceDao<Member> {
 
-    // [TAMBAHAN] Membuka koneksi database terpusat via koneksi.buka()
     private Connection bukaKoneksi() throws SQLException {
         return main.koneksi.buka();
     }
