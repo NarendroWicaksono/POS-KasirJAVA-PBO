@@ -278,16 +278,56 @@ public class dashbordAdmin extends javax.swing.JFrame {
             }
         });
 
-        // Tambahkan tombol langsung ke jPanel1 dan posisikan sejajar persis dengan kolom kiri dan kanan
+        // Tambahkan tombol langsung ke jPanel1
         jPanel1.add(btnSupplier);
         jPanel1.add(btnDaftarAkun);
 
-        // Kolom kiri (sejajar Registrasi & Member): x=294, y=269, width=102, height=53
-        btnSupplier.setBounds(294, 269, 102, 53);
-        // Kolom kanan (sejajar Data Barang & Riwayat): x=499, y=269, width=102, height=53
-        btnDaftarAkun.setBounds(499, 269, 102, 53);
+        // [TAMBAHAN] Sinkronisasi posisi tombol Supplier & Daftar Akun agar selalu sejajar otomatis 
+        // dengan tombol Member dan Riwayat (mengikuti posisi X, lebar, dan tinggi tombol di atasnya)
+        java.awt.event.ComponentAdapter penyelarasanPosisi = new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                sejajarkanTombol();
+            }
+            @Override
+            public void componentMoved(java.awt.event.ComponentEvent e) {
+                sejajarkanTombol();
+            }
+        };
 
-        jPanel1.revalidate();
-        jPanel1.repaint();
+        member.addComponentListener(penyelarasanPosisi);
+        riwayat.addComponentListener(penyelarasanPosisi);
+        jPanel1.addComponentListener(penyelarasanPosisi);
+
+        // Jalankan penyesuaian saat antarmuka selesai dimuat
+        javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                sejajarkanTombol();
+            }
+        });
+    }
+
+    // [TAMBAHAN] Method untuk menyelaraskan koordinat dan ukuran tombol baru dengan tombol di atasnya
+    private void sejajarkanTombol() {
+        if (member != null && riwayat != null && btnSupplier != null && btnDaftarAkun != null) {
+            java.awt.Rectangle bMember = member.getBounds();
+            java.awt.Rectangle bRiwayat = riwayat.getBounds();
+            java.awt.Rectangle bBarang = barang.getBounds();
+
+            if (bMember.width > 0 && bMember.height > 0) {
+                // Jarak vertikal antara Baris 1 (Barang/Regis) dan Baris 2 (Member/Riwayat)
+                int jarakVertikal = (bMember.y > bBarang.y) ? (bMember.y - bBarang.y) : (bMember.height + 26);
+                int yBaru = bMember.y + jarakVertikal;
+
+                // Samakan koordinat X, Y, lebar, dan tinggi tombol Supplier dengan Member
+                btnSupplier.setBounds(bMember.x, yBaru, bMember.width, bMember.height);
+                // Samakan koordinat X, Y, lebar, dan tinggi tombol Daftar Akun dengan Riwayat
+                btnDaftarAkun.setBounds(bRiwayat.x, yBaru, bRiwayat.width, bRiwayat.height);
+
+                jPanel1.revalidate();
+                jPanel1.repaint();
+            }
+        }
     }
 }
